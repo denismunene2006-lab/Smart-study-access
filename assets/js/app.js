@@ -142,6 +142,8 @@ const elements = {
   payBtn: get("payBtn"),
   mpesaPhone: get("mpesaPhone"),
   searchInput: get("searchInput"),
+  librarySearchBtn: get("librarySearchBtn"),
+  clearFiltersBtn: get("clearFiltersBtn"),
   navSearch: get("navSearch"),
   navSearchBtn: get("navSearchBtn"),
   navSearchForm: get("navSearchForm"),
@@ -415,6 +417,26 @@ function syncSearch(value) {
   }
 }
 
+function normalizeSearchTerm(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function clearAllFilters() {
+  if (elements.searchInput) elements.searchInput.value = "";
+  if (elements.navSearch) elements.navSearch.value = "";
+  localStorage.setItem(SEARCH_KEY, "");
+  if (elements.facultyFilter) elements.facultyFilter.value = "";
+  if (elements.departmentFilter) elements.departmentFilter.value = "";
+  if (elements.courseFilter) elements.courseFilter.value = "";
+  if (elements.yearFilter) elements.yearFilter.value = "";
+  if (elements.typeFilter) elements.typeFilter.value = "";
+  const currentPath = window.location.pathname.split("/").pop() || "";
+  if (currentPath === "library.html") {
+    window.history.replaceState({}, "", "library.html");
+  }
+  renderLibrary();
+}
+
 function performNavSearch() {
   if (!elements.navSearch) return;
   const value = elements.navSearch.value.trim();
@@ -427,6 +449,12 @@ function performNavSearch() {
   }
   const nextUrl = value ? `library.html?q=${encodeURIComponent(value)}` : "library.html";
   window.history.replaceState({}, "", nextUrl);
+}
+
+function performLibrarySearch() {
+  if (!elements.searchInput) return;
+  const value = elements.searchInput.value.trim();
+  syncSearch(value);
 }
 
 async function fetchMe() {
@@ -744,7 +772,8 @@ function buildFilters() {
 function renderLibrary() {
   if (!elements.papersGrid || !elements.resultCount) return;
 
-  const search = (elements.searchInput?.value || "").trim().toLowerCase();
+  const rawSearch = (elements.searchInput?.value || localStorage.getItem(SEARCH_KEY) || "").trim();
+  const search = normalizeSearchTerm(rawSearch);
   const filters = {
     faculty: elements.facultyFilter?.value || "",
     department: elements.departmentFilter?.value || "",
@@ -752,11 +781,13 @@ function renderLibrary() {
     year: elements.yearFilter?.value || "",
     type: elements.typeFilter?.value || ""
   };
+  const activeFilters = Object.values(filters).filter(Boolean).length;
 
   const filtered = state.papers.filter((paper) => {
     if (search) {
-      const inName = (paper.courseName || "").toLowerCase().includes(search);
-      if (!inName) return false;
+      const inName = normalizeSearchTerm(paper.courseName || "").includes(search);
+      const inCode = normalizeSearchTerm(paper.courseCode || "").includes(search);
+      if (!inName && !inCode) return false;
     }
     if (filters.faculty && paper.faculty !== filters.faculty) return false;
     if (filters.department && paper.department !== filters.department) return false;
@@ -766,13 +797,22 @@ function renderLibrary() {
     return true;
   });
 
-  elements.resultCount.textContent = `${filtered.length} papers`;
+  const queryLabel = rawSearch ? ` for "${rawSearch}"` : "";
+  const filterLabel = activeFilters ? ` • ${activeFilters} filter${activeFilters === 1 ? "" : "s"} active` : "";
+  elements.resultCount.textContent = `${filtered.length} papers${queryLabel}${filterLabel}`;
 
   if (filtered.length === 0) {
+    const helper = activeFilters
+      ? "Try clearing filters or adjusting your search."
+      : "Try a different course name or code.";
     elements.papersGrid.innerHTML = `
       <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
         <p style="font-size: 1.2rem; color: var(--text-muted);">No papers found matching your search criteria.</p>
-        <button class="btn btn-demo" onclick="syncSearch('')">Clear All Filters</button>
+        <p class="search-hint" style="margin-bottom: 1.5rem;">${helper}</p>
+        <div style="display:flex; gap: 12px; justify-content:center; flex-wrap: wrap;">
+          <button class="btn btn-demo" type="button" onclick="clearAllFilters()">Clear Filters</button>
+          <button class="btn btn-ghost" type="button" onclick="syncSearch('')">Clear Search</button>
+        </div>
       </div>
     `;
     return;
@@ -1261,6 +1301,12 @@ function wireEvents() {
   on(elements.uploadBtn, "click", submitUpload);
   on(elements.closeViewer, "click", closeViewer);
   on(elements.searchInput, "input", (event) => syncSearch(event.target.value));
+  on(elements.searchInput, "keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      performLibrarySearch();
+    }
+  });
   on(elements.navSearch, "input", (event) => syncSearch(event.target.value));
   on(elements.navSearchForm, "submit", (event) => {
     event.preventDefault();
@@ -1274,6 +1320,8 @@ function wireEvents() {
   });
   on(elements.navSearch, "search", performNavSearch);
   on(elements.navSearchBtn, "click", performNavSearch);
+  on(elements.librarySearchBtn, "click", performLibrarySearch);
+  on(elements.clearFiltersBtn, "click", clearAllFilters);
   on(elements.facultyFilter, "change", renderLibrary);
   on(elements.departmentFilter, "change", renderLibrary);
   on(elements.courseFilter, "change", renderLibrary);
