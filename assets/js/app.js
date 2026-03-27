@@ -143,6 +143,8 @@ const elements = {
   mpesaPhone: get("mpesaPhone"),
   searchInput: get("searchInput"),
   navSearch: get("navSearch"),
+  navToggle: get("navToggle"),
+  mobileNav: get("mobileNav"),
   facultyFilter: get("facultyFilter"),
   departmentFilter: get("departmentFilter"),
   courseFilter: get("courseFilter"),
@@ -1210,9 +1212,15 @@ function toggleTheme() {
   if (btn) btn.textContent = next === "dark" ? "☀️" : "🌙";
 }
 
+function setMobileNav(isOpen) {
+  if (!elements.mobileNav || !elements.navToggle) return;
+  elements.mobileNav.classList.toggle("open", isOpen);
+  elements.navToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
 function setActiveNavLink() {
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
-  document.querySelectorAll("nav a").forEach(link => {
+  document.querySelectorAll(".primary-nav a, .mobile-nav a").forEach(link => {
     if (link.getAttribute("href") === currentPath) {
       link.classList.add("active");
     }
@@ -1242,6 +1250,29 @@ function wireEvents() {
   on(elements.copyReferralBtn, "click", copyReferralCode);
   on(elements.demoUserBtn, "click", demoUser);
   on(get("themeToggle"), "click", toggleTheme);
+  on(elements.navToggle, "click", () => {
+    const isOpen = elements.mobileNav?.classList.contains("open");
+    setMobileNav(!isOpen);
+  });
+
+  if (elements.mobileNav) {
+    elements.mobileNav.querySelectorAll("a").forEach((link) => {
+      on(link, "click", () => setMobileNav(false));
+    });
+  }
+
+  document.addEventListener("click", (event) => {
+    if (!elements.mobileNav || !elements.navToggle) return;
+    if (!elements.mobileNav.classList.contains("open")) return;
+    if (elements.mobileNav.contains(event.target) || elements.navToggle.contains(event.target)) return;
+    setMobileNav(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      setMobileNav(false);
+    }
+  });
 
   document.querySelectorAll(".toggle-password").forEach((btn) => {
     on(btn, "click", () => {
