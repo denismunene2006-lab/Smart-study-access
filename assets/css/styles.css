@@ -249,10 +249,30 @@ nav a.active {
   color: white;
   font-size: var(--fs-sm);
   min-width: 160px;
+  flex: 1 1 auto;
 }
 
 .nav-search input::placeholder {
   color: rgba(255, 255, 255, 0.6);
+}
+
+.nav-search .nav-search-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  box-shadow: none;
+  filter: none;
+}
+
+.nav-search .nav-search-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  filter: none;
 }
 
 main {
@@ -808,7 +828,7 @@ input:focus, select:focus, textarea:focus {
 
   .nav-search input {
     min-width: 0;
-    width: 100%;
+    width: auto;
   }
 
   .footer-grid {

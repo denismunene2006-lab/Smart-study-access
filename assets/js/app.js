@@ -143,6 +143,7 @@ const elements = {
   mpesaPhone: get("mpesaPhone"),
   searchInput: get("searchInput"),
   navSearch: get("navSearch"),
+  navSearchBtn: get("navSearchBtn"),
   navToggle: get("navToggle"),
   mobileNav: get("mobileNav"),
   facultyFilter: get("facultyFilter"),
@@ -405,6 +406,16 @@ function syncSearch(value) {
   }
   if (elements.navSearch) {
     elements.navSearch.value = value;
+  }
+}
+
+function performNavSearch() {
+  if (!elements.navSearch) return;
+  const value = elements.navSearch.value.trim();
+  syncSearch(value);
+  const currentPath = window.location.pathname.split("/").pop() || "index.html";
+  if (currentPath !== "library.html") {
+    window.location.href = "library.html";
   }
 }
 
@@ -734,9 +745,8 @@ function renderLibrary() {
 
   const filtered = state.papers.filter((paper) => {
     if (search) {
-      const inCode = paper.courseCode.toLowerCase().includes(search);
       const inName = (paper.courseName || "").toLowerCase().includes(search);
-      if (!inCode && !inName) return false;
+      if (!inName) return false;
     }
     if (filters.faculty && paper.faculty !== filters.faculty) return false;
     if (filters.department && paper.department !== filters.department) return false;
@@ -1242,6 +1252,13 @@ function wireEvents() {
   on(elements.closeViewer, "click", closeViewer);
   on(elements.searchInput, "input", (event) => syncSearch(event.target.value));
   on(elements.navSearch, "input", (event) => syncSearch(event.target.value));
+  on(elements.navSearch, "keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      performNavSearch();
+    }
+  });
+  on(elements.navSearchBtn, "click", performNavSearch);
   on(elements.facultyFilter, "change", renderLibrary);
   on(elements.departmentFilter, "change", renderLibrary);
   on(elements.courseFilter, "change", renderLibrary);
