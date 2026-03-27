@@ -1,0 +1,118 @@
+﻿﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin - Embu Past Papers Hub</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        Embu Past Papers Hub
+        <span>University of Embu - Smart Study Access</span>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="auth.html">Login</a>
+        <a href="subscription.html">Subscription</a>
+        <a href="library.html">Library</a>
+        <a href="rewards.html">Rewards</a>
+        <a href="profile.html">Profile</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+      <div class="nav-search">
+        <input id="navSearch" type="search" placeholder="Search course code..." />
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="admin">
+      <div class="section-title">
+        <h2>Admin Dashboard (Prototype)</h2>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h3>Subscriptions</h3>
+          <div class="metric" id="adminActiveSubs">0</div>
+          <div>Active subscriptions</div>
+        </div>
+        <div class="card">
+          <h3>Referrals</h3>
+          <div class="metric" id="adminReferrals">0</div>
+          <div>Total referrals</div>
+        </div>
+        <div class="card">
+          <h3>Most Viewed</h3>
+          <div id="adminMostViewed">No data yet.</div>
+        </div>
+      </div>
+      <div class="card mt-16">
+        <h3>Upload Approvals</h3>
+        <div id="adminUploads">No uploads waiting approval.</div>
+      </div>
+    </section>
+
+    <section id="devnotes">
+      <div class="section-title">
+        <h2>Backend Blueprint and Extension Notes</h2>
+      </div>
+      <div class="card">
+        <details>
+          <summary style="font-weight:700; cursor:pointer;">Open developer notes</summary>
+          <p>Recommended stack: Node.js (Express) or Django + PostgreSQL + object storage (S3 compatible).</p>
+          <div class="pill">Core tables</div>
+          <p>Users, Papers, Subscriptions, Transactions, Rewards, Referrals, Uploads, AdminActions.</p>
+          <div class="pill">Key API endpoints</div>
+          <p>POST /auth/signup, POST /auth/login, POST /subscriptions/pay, POST /subscriptions/renew, GET /papers, GET /papers/{id}, POST /uploads, PATCH /uploads/{id}/approve, POST /referrals, GET /admin/metrics.</p>
+          <div class="pill">Secure PDF storage</div>
+          <p>Store PDFs in private bucket. Serve through signed URLs and stream in PDF.js with download button disabled. Add watermarks server-side.</p>
+          <div class="pill">Referral bonus extension</div>
+          <p>On each referral signup: increment referral_count. If referral_count % 3 == 0, add reward_days +7 and record in Rewards table.</p>
+          <div class="pill">Upload reward extension</div>
+          <p>After admin approves upload: add reward_days +2, mark reward source = upload_id. Reverse if upload rejected later.</p>
+          <div class="pill">M-Pesa Daraja integration</div>
+          <p>Use STK Push: initiate payment, store CheckoutRequestID, validate callback before extending subscription by 30 days.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="main-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand">
+          Embu Past Papers Hub
+          <span>University of Embu - Smart Study Access</span>
+        </div>
+        <p>Your ultimate resource for University of Embu past papers. Study smarter, prepare better, and excel in your exams.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="library.html">Library</a></li>
+          <li><a href="subscription.html">Subscription</a></li>
+          <li><a href="rewards.html">Rewards</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="profile.html">My Account</a></li>
+          <li><a href="auth.html">Login / Signup</a></li>
+          <li><a href="admin.html">Admin Dashboard</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Embu Past Papers Hub. Prototype build for University of Embu students. No real payments are processed in this demo.</p>
+    </div>
+  </footer>
+  <div id="toast" class="toast"></div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

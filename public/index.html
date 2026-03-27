@@ -1,0 +1,146 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>University of Embu Past Papers Hub</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        Embu Past Papers Hub
+        <span>University of Embu - Smart Study Access</span>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="auth.html">Login</a>
+        <a href="subscription.html">Subscription</a>
+        <a href="library.html">Library</a>
+        <a href="rewards.html">Rewards</a>
+        <a href="profile.html">Profile</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+      <button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+      <div class="nav-search">
+        <input id="navSearch" type="search" placeholder="Search course code..." />
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div>
+        <div class="pill">Built for mobile-first students</div>
+        <h1>Master your exams with smart access.</h1>
+        <p>Sign up with your student ID, enjoy a 7-day free trial, then subscribe for just 30 Ksh per month. Papers open in a secure in-app viewer with watermark protection and no download button.</p>
+        <div class="cta-row">
+          <a class="btn btn-trial" href="auth.html">Start Free Trial</a>
+          <a class="btn btn-browse" href="library.html">Browse Library</a>
+          <button class="btn btn-demo" id="demoUserBtn" type="button">Create Demo Student</button>
+        </div>
+        <div id="renewalNotice" class="notice"></div>
+      </div>
+      <div class="hero-card">
+        <h3>Today on your dashboard</h3>
+        <p id="heroStatus">Create an account to unlock your free trial and subscription tools.</p>
+        <div class="split">
+          <div>
+            <div class="metric" id="metricAccess">0</div>
+            <div>Active access days</div>
+          </div>
+          <div>
+            <div class="metric" id="metricPapers">0</div>
+            <div>Past papers ready</div>
+          </div>
+        </div>
+        <p>Reward boost: Upload a past paper to earn +2 free days. Invite 3 friends for +7 days.</p>
+      </div>
+    </section>
+
+    <section id="features" class="reveal">
+      <div class="section-title">
+        <h2>What Students Get</h2>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h3>Secure In-App Viewer</h3>
+          <p>Open PDFs inside the app with watermark overlay and toolbar hidden. Use FLAG_SECURE in Android webview for screenshot blocking.</p>
+        </div>
+        <div class="card">
+          <h3>Fast Search</h3>
+          <p>Find papers by course code, year, exam type, or faculty in seconds.</p>
+        </div>
+        <div class="card">
+          <h3>Transparent Pricing</h3>
+          <p>30 Ksh monthly subscription with M-Pesa Daraja integration. Renewal reminders keep you active.</p>
+        </div>
+        <div class="card">
+          <h3>Rewards That Matter</h3>
+          <p>Upload past papers or invite friends and earn bonus access days automatically.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="get-started" class="reveal">
+      <div class="section-title">
+        <h2>Get Started</h2>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h3>Create Your Account</h3>
+          <p>Register with your student ID and unlock a 7-day free trial instantly.</p>
+          <a class="btn btn-trial" href="auth.html">Go to Login</a>
+        </div>
+        <div class="card">
+          <h3>Activate Subscription</h3>
+          <p>Pay 30 Ksh with M-Pesa to unlock 30 days of access.</p>
+          <a class="btn btn-pay" href="subscription.html">Subscribe</a>
+        </div>
+        <div class="card">
+          <h3>Browse the Library</h3>
+          <p>Search by course code, department, year, and exam type.</p>
+          <a class="btn btn-browse" href="library.html">Open Library</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="main-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand">
+          Embu Past Papers Hub
+          <span>University of Embu - Smart Study Access</span>
+        </div>
+        <p>Your ultimate resource for University of Embu past papers. Study smarter, prepare better, and excel in your exams.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="library.html">Library</a></li>
+          <li><a href="subscription.html">Subscription</a></li>
+          <li><a href="rewards.html">Rewards</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="profile.html">My Account</a></li>
+          <li><a href="auth.html">Login / Signup</a></li>
+          <li><a href="admin.html">Admin Dashboard</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Embu Past Papers Hub. Prototype build for University of Embu students. No real payments are processed in this demo.</p>
+    </div>
+  </footer>
+  <div id="toast" class="toast"></div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

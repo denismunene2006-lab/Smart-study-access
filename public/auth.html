@@ -1,0 +1,110 @@
+﻿﻿﻿﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login - Embu Past Papers Hub</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        Embu Past Papers Hub
+        <span>University of Embu - Smart Study Access</span>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="auth.html">Login</a>
+        <a href="subscription.html">Subscription</a>
+        <a href="library.html">Library</a>
+        <a href="rewards.html">Rewards</a>
+        <a href="profile.html">Profile</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+      <div class="nav-search">
+        <input id="navSearch" type="search" placeholder="Search course code..." />
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="auth">
+      <div class="section-title">
+        <h2>Authentication</h2>
+      </div>
+      <div class="split">
+        <div class="card">
+          <h3>Create Account</h3>
+          <label for="signupName">Full name</label>
+          <input id="signupName" type="text" placeholder="Jane Wanjiku" />
+          <label for="signupEmail">Email</label>
+          <input id="signupEmail" type="email" placeholder="you@embuni.ac.ke" />
+          <label for="signupStudent">Student ID</label>
+          <input id="signupStudent" type="text" placeholder="UEB/2024/12345" />
+          <label for="signupReferral">Referral code (optional)</label>
+          <input id="signupReferral" type="text" placeholder="Enter referral code" />
+          <label for="signupPassword">Password</label>
+          <div class="password-wrapper">
+            <input id="signupPassword" type="password" placeholder="Create a password" />
+            <button type="button" class="toggle-password" data-target="signupPassword" aria-label="Toggle password visibility">🙈</button>
+          </div>
+          <button id="signupBtn" class="btn btn-trial" type="button">Start 7-Day Free Trial</button>
+        </div>
+        <div class="card">
+          <h3>Login</h3>
+          <label for="loginId">Email or Student ID</label>
+          <input id="loginId" type="text" placeholder="Email or ID" />
+          <label for="loginPassword">Password</label>
+          <div class="password-wrapper">
+            <input id="loginPassword" type="password" placeholder="Your password" />
+            <button type="button" class="toggle-password" data-target="loginPassword" aria-label="Toggle password visibility">🙈</button>
+          </div>
+          <button id="loginBtn" class="btn btn-login" type="button">Login</button>
+        </div>
+        <div class="card">
+          <h3>Current Access</h3>
+          <div id="accessStatus" class="status">Not logged in</div>
+          <p id="accessDetails">Sign up to activate your 7-day free trial.</p>
+          <button id="logoutBtn" class="btn btn-logout" type="button">Logout</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="main-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand">
+          Embu Past Papers Hub
+          <span>University of Embu - Smart Study Access</span>
+        </div>
+        <p>Your ultimate resource for University of Embu past papers. Study smarter, prepare better, and excel in your exams.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="library.html">Library</a></li>
+          <li><a href="subscription.html">Subscription</a></li>
+          <li><a href="rewards.html">Rewards</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="profile.html">My Account</a></li>
+          <li><a href="auth.html">Login / Signup</a></li>
+          <li><a href="admin.html">Admin Dashboard</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Embu Past Papers Hub. Prototype build for University of Embu students. No real payments are processed in this demo.</p>
+    </div>
+  </footer>
+  <div id="toast" class="toast"></div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

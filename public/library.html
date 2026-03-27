@@ -1,0 +1,103 @@
+﻿﻿﻿﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Library - Embu Past Papers Hub</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        Embu Past Papers Hub
+        <span>University of Embu - Smart Study Access</span>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="auth.html">Login</a>
+        <a href="subscription.html">Subscription</a>
+        <a href="library.html">Library</a>
+        <a href="rewards.html">Rewards</a>
+        <a href="profile.html">Profile</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+      <div class="nav-search">
+        <input id="navSearch" type="search" placeholder="Search course code..." />
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="library">
+      <div class="section-title">
+        <h2>Past Papers Library</h2>
+      </div>
+      <div class="card">
+        <div class="library-toolbar">
+          <input id="searchInput" type="search" placeholder="Search by course code" />
+          <select id="facultyFilter"></select>
+          <select id="departmentFilter"></select>
+          <select id="courseFilter"></select>
+          <select id="yearFilter"></select>
+          <select id="typeFilter"></select>
+        </div>
+        <div id="resultCount" class="pill">0 papers</div>
+      </div>
+      <div id="papersGrid" class="grid mt-16"></div>
+    </section>
+  </main>
+
+  <footer class="main-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand">
+          Embu Past Papers Hub
+          <span>University of Embu - Smart Study Access</span>
+        </div>
+        <p>Your ultimate resource for University of Embu past papers. Study smarter, prepare better, and excel in your exams.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="library.html">Library</a></li>
+          <li><a href="subscription.html">Subscription</a></li>
+          <li><a href="rewards.html">Rewards</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="profile.html">My Account</a></li>
+          <li><a href="auth.html">Login / Signup</a></li>
+          <li><a href="admin.html">Admin Dashboard</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Embu Past Papers Hub. Prototype build for University of Embu students. No real payments are processed in this demo.</p>
+    </div>
+  </footer>
+
+  <div id="viewerModal" class="viewer-modal" aria-hidden="true">
+    <div class="viewer-shell" role="dialog" aria-modal="true">
+      <div class="viewer-header">
+        <div>
+          <div id="viewerTitle" style="font-weight:700;">Viewer</div>
+          <div id="viewerMeta" style="font-size:12px; color: rgba(14, 27, 22, 0.6);"></div>
+        </div>
+        <button id="closeViewer" class="btn btn-close" type="button">Close</button>
+      </div>
+      <div class="viewer-frame">
+        <iframe id="viewerFrame" title="Secure PDF Viewer" sandbox="allow-same-origin"></iframe>
+        <div class="watermark"><span>Embu Past Papers - Protected</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
