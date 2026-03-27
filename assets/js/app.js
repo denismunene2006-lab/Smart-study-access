@@ -389,7 +389,12 @@ function formatDate(value) {
 }
 
 function loadSearch() {
-  const stored = localStorage.getItem(SEARCH_KEY) || "";
+  const params = new URLSearchParams(window.location.search);
+  const query = params.get("q");
+  const stored = query !== null ? query : (localStorage.getItem(SEARCH_KEY) || "");
+  if (query !== null) {
+    localStorage.setItem(SEARCH_KEY, query);
+  }
   if (elements.searchInput) {
     elements.searchInput.value = stored;
   }
@@ -415,8 +420,12 @@ function performNavSearch() {
   syncSearch(value);
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
   if (currentPath !== "library.html") {
-    window.location.href = "library.html";
+    const target = value ? `library.html?q=${encodeURIComponent(value)}` : "library.html";
+    window.location.href = target;
+    return;
   }
+  const nextUrl = value ? `library.html?q=${encodeURIComponent(value)}` : "library.html";
+  window.history.replaceState({}, "", nextUrl);
 }
 
 async function fetchMe() {
