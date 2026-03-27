@@ -421,6 +421,35 @@ function normalizeSearchTerm(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function buildSearchSuggestions() {
+  const listId = "courseSuggestions";
+  let datalist = document.getElementById(listId);
+  if (!datalist) {
+    datalist = document.createElement("datalist");
+    datalist.id = listId;
+    document.body.appendChild(datalist);
+  }
+
+  const suggestions = new Set();
+  state.papers.forEach((paper) => {
+    [paper.courseName, paper.unitName, paper.courseCode].forEach((value) => {
+      if (value) suggestions.add(value);
+    });
+  });
+
+  datalist.innerHTML = "";
+  Array.from(suggestions)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      datalist.appendChild(option);
+    });
+
+  if (elements.navSearch) elements.navSearch.setAttribute("list", listId);
+  if (elements.searchInput) elements.searchInput.setAttribute("list", listId);
+}
+
 function clearAllFilters() {
   if (elements.searchInput) elements.searchInput.value = "";
   if (elements.navSearch) elements.navSearch.value = "";
@@ -1230,6 +1259,7 @@ function updateUI() {
   renderLibrary();
   renderUploads();
   renderAdmin();
+  buildSearchSuggestions();
 }
 
 function demoUser() {
