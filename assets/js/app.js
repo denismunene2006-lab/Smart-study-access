@@ -421,6 +421,10 @@ function normalizeSearchTerm(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function compactSearchTerm(value) {
+  return normalizeSearchTerm(value).replace(/\s+/g, "");
+}
+
 function buildSearchSuggestions() {
   const listId = "courseSuggestions";
   let datalist = document.getElementById(listId);
@@ -803,6 +807,7 @@ function renderLibrary() {
 
   const rawSearch = (elements.searchInput?.value || localStorage.getItem(SEARCH_KEY) || "").trim();
   const search = normalizeSearchTerm(rawSearch);
+  const searchCompact = search.replace(/\s+/g, "");
   const filters = {
     faculty: elements.facultyFilter?.value || "",
     department: elements.departmentFilter?.value || "",
@@ -814,15 +819,12 @@ function renderLibrary() {
 
   const filtered = state.papers.filter((paper) => {
     if (search) {
-      const searchable = [
-        paper.courseName,
-        paper.unitName,
-        paper.courseCode
-      ]
-        .filter(Boolean)
-        .map((value) => normalizeSearchTerm(value))
-        .join(" ");
-      if (!searchable.includes(search)) return false;
+      const parts = [paper.courseName, paper.unitName, paper.courseCode].filter(Boolean);
+      const searchable = parts.map((value) => normalizeSearchTerm(value)).join(" ");
+      const searchableCompact = parts.map((value) => compactSearchTerm(value)).join("");
+      if (!searchable.includes(search) && !searchableCompact.includes(searchCompact)) {
+        return false;
+      }
     }
     if (filters.faculty && paper.faculty !== filters.faculty) return false;
     if (filters.department && paper.department !== filters.department) return false;
@@ -856,12 +858,14 @@ function renderLibrary() {
   elements.papersGrid.innerHTML = filtered
     .map((paper, index) => {
       const locked = !hasActiveAccess();
+      const examLabel = `${paper.examType || ""} ${paper.year || ""}`.trim();
+      const subtitle = [paper.courseName || "", examLabel].filter(Boolean).join(" | ");
       return `
         <div class="card paper-card reveal" style="transition-delay: ${index * 0.05}s">
           ${locked ? '<div class="lock">Locked</div>' : ''}
           <div class="badge">${paper.faculty}</div>
-          <h3>${paper.courseCode} - ${paper.courseName || ""}</h3>
-          <p>${paper.department} | ${paper.examType} ${paper.year}</p>
+          <h3>${paper.courseCode || ""}</h3>
+          <p>${subtitle}</p>
           <div class="paper-meta">${paper.pages || ""} ${paper.pages ? "pages |" : ""} ${paper.views || 0} views</div>
           <button class="btn btn-open" type="button" onclick="openViewer('${paper.id}')">Open Paper</button>
         </div>
