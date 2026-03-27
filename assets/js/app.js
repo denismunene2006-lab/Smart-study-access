@@ -785,9 +785,15 @@ function renderLibrary() {
 
   const filtered = state.papers.filter((paper) => {
     if (search) {
-      const inName = normalizeSearchTerm(paper.courseName || "").includes(search);
-      const inCode = normalizeSearchTerm(paper.courseCode || "").includes(search);
-      if (!inName && !inCode) return false;
+      const searchable = [
+        paper.courseName,
+        paper.unitName,
+        paper.courseCode
+      ]
+        .filter(Boolean)
+        .map((value) => normalizeSearchTerm(value))
+        .join(" ");
+      if (!searchable.includes(search)) return false;
     }
     if (filters.faculty && paper.faculty !== filters.faculty) return false;
     if (filters.department && paper.department !== filters.department) return false;
@@ -804,7 +810,7 @@ function renderLibrary() {
   if (filtered.length === 0) {
     const helper = activeFilters
       ? "Try clearing filters or adjusting your search."
-      : "Try a different course name or code.";
+      : "Try a different course or unit name, or code.";
     elements.papersGrid.innerHTML = `
       <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
         <p style="font-size: 1.2rem; color: var(--text-muted);">No papers found matching your search criteria.</p>
