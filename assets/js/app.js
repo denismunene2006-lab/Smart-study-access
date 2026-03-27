@@ -144,6 +144,7 @@ const elements = {
   searchInput: get("searchInput"),
   navSearch: get("navSearch"),
   navSearchBtn: get("navSearchBtn"),
+  navSearchForm: get("navSearchForm"),
   navToggle: get("navToggle"),
   mobileNav: get("mobileNav"),
   facultyFilter: get("facultyFilter"),
@@ -1261,12 +1262,17 @@ function wireEvents() {
   on(elements.closeViewer, "click", closeViewer);
   on(elements.searchInput, "input", (event) => syncSearch(event.target.value));
   on(elements.navSearch, "input", (event) => syncSearch(event.target.value));
+  on(elements.navSearchForm, "submit", (event) => {
+    event.preventDefault();
+    performNavSearch();
+  });
   on(elements.navSearch, "keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       performNavSearch();
     }
   });
+  on(elements.navSearch, "search", performNavSearch);
   on(elements.navSearchBtn, "click", performNavSearch);
   on(elements.facultyFilter, "change", renderLibrary);
   on(elements.departmentFilter, "change", renderLibrary);
