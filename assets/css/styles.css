@@ -295,7 +295,14 @@ section {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  margin-bottom: 1.5rem;
+  margin-bottom: 2.5rem;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  padding: 0.85rem 1.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--stroke);
+  box-shadow: var(--shadow-md);
+  width: fit-content;
 }
 
 .section-title h2 {
