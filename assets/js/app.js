@@ -1,4 +1,4 @@
-﻿const API_BASE = localStorage.getItem("uepp_api_base") || "http://localhost:4000/api";
+﻿﻿const API_BASE = localStorage.getItem("uepp_api_base") || "http://localhost:4000/api";
 const TOKEN_KEY = "uepp_token";
 const SEARCH_KEY = "uepp_search_query";
 const MODE_KEY = "uepp_mode";
@@ -15,10 +15,9 @@ const LOCAL_KEYS = {
 const LOCAL_PAPERS_SEED = [
   {
     id: "civ101-2024-cat1",
-    faculty: "Engineering",
-    department: "Civil Engineering",
     courseCode: "CIV 101",
-    courseName: "Statics",
+    unitName: "Statics",
+    courseName: "Civil Engineering",
     year: 2024,
     examType: "CAT 1",
     pages: 6,
@@ -26,32 +25,29 @@ const LOCAL_PAPERS_SEED = [
   },
   {
     id: "eee202-2023-end",
-    faculty: "Engineering",
-    department: "Electrical Engineering",
     courseCode: "EEE 202",
-    courseName: "Circuits II",
+    unitName: "Circuits II",
+    courseName: "Electrical Engineering",
     year: 2023,
-    examType: "End of Semester",
+    examType: "Main Exam",
     pages: 9,
     views: 188
   },
   {
     id: "acc110-2022-end",
-    faculty: "Business",
-    department: "Accounting",
     courseCode: "ACC 110",
-    courseName: "Financial Accounting",
+    unitName: "Financial Accounting",
+    courseName: "Business Administration",
     year: 2022,
-    examType: "End of Semester",
+    examType: "Main Exam",
     pages: 12,
     views: 142
   },
   {
     id: "edu210-2024-cat2",
-    faculty: "Education",
-    department: "Arts Education",
     courseCode: "EDU 210",
-    courseName: "Curriculum Studies",
+    unitName: "Curriculum Studies",
+    courseName: "Nursing Education",
     year: 2024,
     examType: "CAT 2",
     pages: 7,
@@ -59,21 +55,19 @@ const LOCAL_PAPERS_SEED = [
   },
   {
     id: "agr130-2023-end",
-    faculty: "Agriculture",
-    department: "Crop Science",
     courseCode: "AGR 130",
-    courseName: "Plant Physiology",
+    unitName: "Plant Physiology",
+    courseName: "Agriculture",
     year: 2023,
-    examType: "End of Semester",
+    examType: "Main Exam",
     pages: 10,
     views: 105
   },
   {
     id: "nur240-2021-sup",
-    faculty: "Health Sciences",
-    department: "Nursing",
     courseCode: "NUR 240",
-    courseName: "Community Health",
+    unitName: "Community Health",
+    courseName: "Nursing",
     year: 2021,
     examType: "Supplementary",
     pages: 8,
@@ -81,21 +75,19 @@ const LOCAL_PAPERS_SEED = [
   },
   {
     id: "cs211-2024-end",
-    faculty: "Computing",
-    department: "Computer Science",
     courseCode: "CS 211",
-    courseName: "Data Structures",
+    unitName: "Data Structures",
+    courseName: "Computer Science",
     year: 2024,
-    examType: "End of Semester",
+    examType: "Main Exam",
     pages: 11,
     views: 221
   },
   {
     id: "cs101-2022-cat1",
-    faculty: "Computing",
-    department: "Computer Science",
     courseCode: "CS 101",
-    courseName: "Intro to Computing",
+    unitName: "Intro to Computing",
+    courseName: "Computer Science",
     year: 2022,
     examType: "CAT 1",
     pages: 5,
@@ -149,8 +141,6 @@ const elements = {
   navSearchForm: get("navSearchForm"),
   navToggle: get("navToggle"),
   mobileNav: get("mobileNav"),
-  facultyFilter: get("facultyFilter"),
-  departmentFilter: get("departmentFilter"),
   courseFilter: get("courseFilter"),
   yearFilter: get("yearFilter"),
   typeFilter: get("typeFilter"),
@@ -169,8 +159,6 @@ const elements = {
   bonusDays: get("bonusDays"),
   accessUntil: get("accessUntil"),
   uploadTitle: get("uploadTitle"),
-  uploadFaculty: get("uploadFaculty"),
-  uploadDepartment: get("uploadDepartment"),
   uploadCourse: get("uploadCourse"),
   uploadCourseName: get("uploadCourseName"),
   uploadYear: get("uploadYear"),
@@ -215,6 +203,18 @@ function addDays(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
 }
 
 function computeLocalAccess(user) {
@@ -406,15 +406,17 @@ function loadSearch() {
   }
 }
 
+const debouncedRenderLibrary = debounce(() => renderLibrary(), 250);
+
 function syncSearch(value) {
   localStorage.setItem(SEARCH_KEY, value);
   if (elements.searchInput) {
     elements.searchInput.value = value;
-    renderLibrary();
   }
   if (elements.navSearch) {
     elements.navSearch.value = value;
   }
+  debouncedRenderLibrary();
 }
 
 function normalizeSearchTerm(value) {
@@ -458,8 +460,6 @@ function clearAllFilters() {
   if (elements.searchInput) elements.searchInput.value = "";
   if (elements.navSearch) elements.navSearch.value = "";
   localStorage.setItem(SEARCH_KEY, "");
-  if (elements.facultyFilter) elements.facultyFilter.value = "";
-  if (elements.departmentFilter) elements.departmentFilter.value = "";
   if (elements.courseFilter) elements.courseFilter.value = "";
   if (elements.yearFilter) elements.yearFilter.value = "";
   if (elements.typeFilter) elements.typeFilter.value = "";
@@ -785,21 +785,17 @@ function fillSelect(select, placeholder, options) {
 }
 
 function buildFilters() {
-  if (!elements.facultyFilter || !elements.departmentFilter || !elements.courseFilter || !elements.yearFilter || !elements.typeFilter) {
+  if (!elements.courseFilter || !elements.yearFilter || !elements.typeFilter) {
     return;
   }
   const unique = (items) => Array.from(new Set(items)).sort();
-  const faculties = unique(state.papers.map((p) => p.faculty));
-  const departments = unique(state.papers.map((p) => p.department));
-  const courses = unique(state.papers.map((p) => p.courseCode));
+  const courses = unique(state.papers.map((p) => p.courseName).filter(Boolean));
   const years = unique(state.papers.map((p) => p.year));
-  const types = unique(state.papers.map((p) => p.examType));
+  const examTypes = ["CAT 1", "CAT 2", "Main Exam", "Supplementary"];
 
-  fillSelect(elements.facultyFilter, "All faculties", faculties);
-  fillSelect(elements.departmentFilter, "All departments", departments);
   fillSelect(elements.courseFilter, "All courses", courses);
   fillSelect(elements.yearFilter, "All years", years);
-  fillSelect(elements.typeFilter, "All exam types", types);
+  fillSelect(elements.typeFilter, "All exam types", examTypes);
 }
 
 function renderLibrary() {
@@ -809,8 +805,6 @@ function renderLibrary() {
   const search = normalizeSearchTerm(rawSearch);
   const searchCompact = search.replace(/\s+/g, "");
   const filters = {
-    faculty: elements.facultyFilter?.value || "",
-    department: elements.departmentFilter?.value || "",
     course: elements.courseFilter?.value || "",
     year: elements.yearFilter?.value || "",
     type: elements.typeFilter?.value || ""
@@ -826,9 +820,7 @@ function renderLibrary() {
         return false;
       }
     }
-    if (filters.faculty && paper.faculty !== filters.faculty) return false;
-    if (filters.department && paper.department !== filters.department) return false;
-    if (filters.course && paper.courseCode !== filters.course) return false;
+    if (filters.course && paper.courseName !== filters.course) return false;
     if (filters.year && String(paper.year) !== String(filters.year)) return false;
     if (filters.type && paper.examType !== filters.type) return false;
     return true;
@@ -841,7 +833,7 @@ function renderLibrary() {
   if (filtered.length === 0) {
     const helper = activeFilters
       ? "Try clearing filters or adjusting your search."
-      : "Try a different course or unit name, or code.";
+      : "Try a different unit name.";
     elements.papersGrid.innerHTML = `
       <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
         <p style="font-size: 1.2rem; color: var(--text-muted);">No papers found matching your search criteria.</p>
@@ -863,8 +855,7 @@ function renderLibrary() {
       return `
         <div class="card paper-card reveal" style="transition-delay: ${index * 0.05}s">
           ${locked ? '<div class="lock">Locked</div>' : ''}
-          <div class="badge">${paper.faculty}</div>
-          <h3>${paper.courseCode || ""}</h3>
+          <h3>${paper.courseCode || ""} - ${paper.unitName || ""}</h3>
           <p>${subtitle}</p>
           <div class="paper-meta">${paper.pages || ""} ${paper.pages ? "pages |" : ""} ${paper.views || 0} views</div>
           <button class="btn btn-open" type="button" onclick="openViewer('${paper.id}')">Open Paper</button>
@@ -936,7 +927,7 @@ async function openViewer(paperId) {
       elements.viewerTitle.textContent = `${paper.courseCode} ${paper.examType}`;
     }
     if (elements.viewerMeta && paper) {
-      elements.viewerMeta.textContent = `${paper.courseName || ""} | ${paper.year} | ${paper.department}`;
+      elements.viewerMeta.textContent = `${paper.courseName || ""} | ${paper.year}`;
     }
     elements.viewerFrame.src = `${url}#toolbar=0&navpanes=0&scrollbar=0`;
     elements.viewerModal.style.display = "flex";
@@ -961,8 +952,6 @@ function closeViewer() {
 
 function clearUploadForm() {
   if (elements.uploadTitle) elements.uploadTitle.value = "";
-  if (elements.uploadFaculty) elements.uploadFaculty.value = "";
-  if (elements.uploadDepartment) elements.uploadDepartment.value = "";
   if (elements.uploadCourse) elements.uploadCourse.value = "";
   if (elements.uploadCourseName) elements.uploadCourseName.value = "";
   if (elements.uploadYear) elements.uploadYear.value = "";
@@ -976,16 +965,14 @@ async function submitUpload() {
     return;
   }
   const title = elements.uploadTitle?.value.trim() || "";
-  const faculty = elements.uploadFaculty?.value.trim() || "";
-  const department = elements.uploadDepartment?.value.trim() || "";
   const course = elements.uploadCourse?.value.trim() || "";
   const courseName = elements.uploadCourseName?.value.trim() || "";
   const year = elements.uploadYear?.value.trim() || "";
   const type = elements.uploadType?.value.trim() || "";
   const file = elements.uploadFile?.files?.[0];
 
-  if (!title || !faculty || !department || !course || !year || !type || !file) {
-    showToast("Fill all upload fields and attach the PDF.");
+  if (!title || !course || !courseName || !year || !type || !file) {
+    showToast("Please fill all required fields and attach a PDF.");
     return;
   }
 
@@ -993,8 +980,6 @@ async function submitUpload() {
     const upload = {
       id: `upl_${Math.random().toString(36).slice(2, 10)}`,
       title,
-      faculty,
-      department,
       courseCode: course,
       courseName: courseName || "",
       year: Number(year),
@@ -1013,8 +998,6 @@ async function submitUpload() {
 
   const formData = new FormData();
   formData.append("title", title);
-  formData.append("faculty", faculty);
-  formData.append("department", department);
   formData.append("courseCode", course);
   formData.append("courseName", courseName);
   formData.append("year", year);
@@ -1114,10 +1097,9 @@ async function approveUpload(uploadId) {
     upload.status = "Approved";
     const newPaper = {
       id: `paper_${Math.random().toString(36).slice(2, 10)}`,
-      faculty: upload.faculty || "General",
-      department: upload.department || "General",
       courseCode: upload.courseCode,
-      courseName: upload.courseName || upload.title,
+      unitName: upload.title,
+      courseName: upload.courseName || "General",
       year: upload.year,
       examType: upload.examType,
       pages: null,
@@ -1362,8 +1344,6 @@ function wireEvents() {
   on(elements.navSearchBtn, "click", performNavSearch);
   on(elements.librarySearchBtn, "click", performLibrarySearch);
   on(elements.clearFiltersBtn, "click", clearAllFilters);
-  on(elements.facultyFilter, "change", renderLibrary);
-  on(elements.departmentFilter, "change", renderLibrary);
   on(elements.courseFilter, "change", renderLibrary);
   on(elements.yearFilter, "change", renderLibrary);
   on(elements.typeFilter, "change", renderLibrary);
@@ -1374,6 +1354,24 @@ function wireEvents() {
     const isOpen = elements.mobileNav?.classList.contains("open");
     setMobileNav(!isOpen);
   });
+
+  if (elements.uploadCourse) {
+    on(elements.uploadCourse, "input", () => {
+      elements.uploadCourse.value = elements.uploadCourse.value.toUpperCase();
+      const code = elements.uploadCourse.value;
+      if (code.length >= 3) {
+        const match = state.papers.find(p => p.courseCode.replace(/\s+/g, '') === code.replace(/\s+/g, ''));
+        if (match && elements.uploadCourseName && !elements.uploadCourseName.value) {
+          elements.uploadCourseName.value = match.courseName;
+        }
+      }
+    });
+  }
+
+  if (elements.uploadYear) {
+    elements.uploadYear.max = new Date().getFullYear();
+    elements.uploadYear.min = 2000;
+  }
 
   if (elements.mobileNav) {
     elements.mobileNav.querySelectorAll("a").forEach((link) => {

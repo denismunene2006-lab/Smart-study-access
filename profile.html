@@ -1,4 +1,4 @@
-﻿﻿<!doctype html>
+﻿﻿﻿﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -29,7 +29,7 @@
       </button>
       <button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
       <form id="navSearchForm" class="nav-search" role="search">
-        <input id="navSearch" type="search" placeholder="Search course or unit name, or code..." />
+        <input id="navSearch" type="search" placeholder="Search by unit name..." />
         <button id="navSearchBtn" class="nav-search-btn" type="button">Search</button>
       </form>
     </div>
@@ -68,32 +68,50 @@
         </div>
       </div>
 
-      <div class="card mt-16">
-        <h3>Upload a Past Paper</h3>
-        <p>Contribute to the hub and earn <strong>+2 bonus days</strong> for every approved upload.</p>
-        <div class="grid">
-          <div>
-            <label for="uploadTitle">Paper title</label>
-            <input id="uploadTitle" type="text" placeholder="e.g. Statics CAT 1 2024" />
-            <label for="uploadFaculty">Faculty</label>
-            <input id="uploadFaculty" type="text" placeholder="Engineering" />
-            <label for="uploadDepartment">Department</label>
-            <input id="uploadDepartment" type="text" placeholder="Civil Engineering" />
-          </div>
-          <div>
-            <label for="uploadCourse">Course code</label>
-            <input id="uploadCourse" type="text" placeholder="CIV 101" />
-            <label for="uploadCourseName">Course name</label>
-            <input id="uploadCourseName" type="text" placeholder="Statics" />
-            <label for="uploadYear">Year</label>
-            <input id="uploadYear" type="number" placeholder="2024" />
-          </div>
+      <div class="card" style="margin-top: var(--space-xl);">
+        <div class="section-title">
+          <h2>Upload a Past Paper</h2>
         </div>
-        <label for="uploadType">Exam type</label>
-        <input id="uploadType" type="text" placeholder="End of Semester, CAT 1, etc." />
-        <label for="uploadFile">PDF file</label>
-        <input id="uploadFile" type="file" accept="application/pdf" />
-        <button id="uploadBtn" type="button" class="btn btn-upload mt-16">Submit Upload</button>
+        <div class="card">
+          <p style="margin-bottom: var(--space-md);">Contribute and earn <strong>+2 bonus days</strong> for every approved upload.</p>
+          <div class="grid">
+            <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+              <div>
+                <label for="uploadTitle">Unit Title</label>
+                <input id="uploadTitle" type="text" placeholder="e.g. Data Structures" required />
+              </div>
+              <div>
+                <label for="uploadCourse">Unit Code</label>
+                <input id="uploadCourse" type="text" placeholder="e.g. CSC211" required />
+              </div>
+              <div>
+                <label for="uploadCourseName">Course Name</label>
+                <input id="uploadCourseName" type="text" placeholder="e.g. Computer Science" required />
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+              <div>
+                <label for="uploadYear">Year</label>
+                <input id="uploadYear" type="number" placeholder="e.g. 2026" required />
+              </div>
+              <div>
+                <label for="uploadType">Exam Type</label>
+                <select id="uploadType" required style="width: 100%;">
+                  <option value="" disabled selected>Select exam type</option>
+                  <option value="CAT 1">CAT 1</option>
+                  <option value="CAT 2">CAT 2</option>
+                  <option value="Main Exam">Main Exam</option>
+                  <option value="Supplementary">Supplementary</option>
+                </select>
+              </div>
+              <div>
+                <label for="uploadFile">PDF File</label>
+                <input id="uploadFile" type="file" accept="application/pdf" required />
+              </div>
+            </div>
+          </div>
+          <button id="uploadBtn" type="button" class="btn btn-upload mt-16" style="width: 100%; justify-content: center;">Upload Paper</button>
+        </div>
       </div>
     </section>
   </main>

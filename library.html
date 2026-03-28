@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<!doctype html>
+﻿﻿﻿﻿﻿﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -29,7 +29,7 @@
       </button>
       <button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
       <form id="navSearchForm" class="nav-search" role="search">
-        <input id="navSearch" type="search" placeholder="Search course or unit name, or code..." />
+        <input id="navSearch" type="search" placeholder="Search by unit name..." />
         <button id="navSearchBtn" class="nav-search-btn" type="button">Search</button>
       </form>
     </div>
@@ -51,21 +51,18 @@
       </div>
       <div class="card">
         <div class="library-toolbar">
-          <div class="library-search">
-            <input id="searchInput" type="search" placeholder="Search by course or unit name, or code" />
-            <button id="librarySearchBtn" class="library-search-btn" type="button">Search</button>
-          </div>
-          <select id="facultyFilter"></select>
-          <select id="departmentFilter"></select>
+          <input id="searchInput" type="search" placeholder="Search by unit name" />
           <select id="courseFilter"></select>
           <select id="yearFilter"></select>
           <select id="typeFilter"></select>
-          <button id="clearFiltersBtn" class="clear-filters-btn" type="button">Clear Filters</button>
+          <div class="toolbar-actions">
+            <button id="librarySearchBtn" class="library-search-btn" type="button">Search</button>
+            <button id="clearFiltersBtn" class="clear-filters-btn" type="button">Clear Filters</button>
+          </div>
         </div>
-        <p class="search-hint">Tip: Try “Data Structures”, “CS 211”, or “CS211”. Search is not case sensitive.</p>
         <div id="resultCount" class="pill">0 papers</div>
       </div>
-      <div id="papersGrid" class="grid mt-16"></div>
+      <div id="papersGrid" class="grid" style="margin-top: var(--space-lg);"></div>
     </section>
   </main>
 

@@ -1,4 +1,4 @@
-﻿import express from "express";
+﻿﻿import express from "express";
 import fs from "fs";
 import path from "path";
 import { query } from "../db.js";
@@ -7,19 +7,11 @@ import { computeAccess } from "../utils/access.js";
 
 const router = express.Router();
 
-function buildWhere({ faculty, department, courseCode, year, examType, search }) {
+function buildWhere({ courseCode, year, examType, search }) {
   const clauses = [];
   const values = [];
   let idx = 1;
 
-  if (faculty) {
-    clauses.push(`faculty = $${idx++}`);
-    values.push(faculty);
-  }
-  if (department) {
-    clauses.push(`department = $${idx++}`);
-    values.push(department);
-  }
   if (courseCode) {
     clauses.push(`course_code = $${idx++}`);
     values.push(courseCode);
@@ -44,14 +36,12 @@ function buildWhere({ faculty, department, courseCode, year, examType, search })
 }
 
 router.get("/", async (req, res) => {
-  const { faculty, department, courseCode, year, examType, search } = req.query;
-  const { where, values } = buildWhere({ faculty, department, courseCode, year, examType, search });
+  const { courseCode, year, examType, search } = req.query;
+  const { where, values } = buildWhere({ courseCode, year, examType, search });
   const rows = await query(`SELECT * FROM papers ${where} ORDER BY year DESC`, values);
 
   const papers = rows.map((paper) => ({
     id: paper.id,
-    faculty: paper.faculty,
-    department: paper.department,
     courseCode: paper.course_code,
     courseName: paper.course_name,
     year: paper.year,
@@ -72,8 +62,6 @@ router.get("/:id", async (req, res) => {
   return res.json({
     paper: {
       id: paper.id,
-      faculty: paper.faculty,
-      department: paper.department,
       courseCode: paper.course_code,
       courseName: paper.course_name,
       year: paper.year,
