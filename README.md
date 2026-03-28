@@ -1,6 +1,11 @@
 # Embu Past Papers Hub
 
+> **Note:** This project is currently under active development and is incomplete.
+
 University of Embu Past Papers Hub is a lightweight web experience designed for students to discover, access, and manage past papers. The frontend is a clean, static site with multiple pages, centralized styling, and shared scripts. A backend can be connected later through the `server/` directory.
+
+## Live Website
+You can view the current progress here: https://denismunene2006-lab.github.io/Smart-study-access/
 
 ## Project Goals
 - Provide a clear, mobile-first experience for students.
