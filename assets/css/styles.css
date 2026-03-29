@@ -871,6 +871,11 @@ input:focus, select:focus, textarea:focus {
     padding-bottom: 0;
   }
 
+  /* Reorder auth cards on mobile: Login first, then Create Account */
+  #auth .split .card:nth-child(1) { order: 2; } /* Create Account card */
+  #auth .split .card:nth-child(2) { order: 1; } /* Login card */
+  #auth .split .card:nth-child(3) { order: 3; } /* Current Access card */
+
   .library-toolbar {
     grid-template-columns: 1fr;
   }
