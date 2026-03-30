@@ -46,7 +46,7 @@ The site is ready for static hosting. Deploy the repo root to your host of choic
 For GitHub Pages, set the Pages source to the `/(root)` folder on the `main` branch.
 
 ## Notes
-- Any backend integration should be developed inside `server/`.
+- Any backend integration should be developed inside `server/`.<br>
 -Keep shared UI logic in `assets/js/app.js` to avoid duplication.
 ___
   **Support**: If you like this project, consider giving it a star.
