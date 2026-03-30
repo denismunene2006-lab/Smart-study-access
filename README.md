@@ -48,5 +48,5 @@ For GitHub Pages, set the Pages source to the `/(root)` folder on the `main` bra
 ## Notes
 - Any backend integration should be developed inside `server/`.
 -Keep shared UI logic in `assets/js/app.js` to avoid duplication.
-  ===
+___
   **Support**: If you like this project, consider giving it a star.
