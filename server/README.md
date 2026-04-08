@@ -1,37 +1,41 @@
-﻿# Embu Past Papers API
+# Embu Past Papers API
 
-## Prerequisites
-- Node.js 18+
-- PostgreSQL
-- psql available in PATH
+## Stack
+- Express on Render
+- MongoDB Atlas (or another MongoDB deployment)
+- M-Pesa STK Push for payments
+- Persistent disk on Render for uploaded PDFs
 
-## Setup
-1. cd server
-2. Copy env file and update values:
-   - cp .env.example .env
-3. Create database and run schema:
-   - psql $DATABASE_URL -f db/schema.sql
+## Local setup
+1. `cd server`
+2. Copy `server/.env.example` to `server/.env`
+3. Update `MONGODB_URI`, `JWT_SECRET`, and the `MPESA_*` values
 4. Install dependencies:
-   - npm install
-5. Start the API:
-   - npm run dev
+   - `npm install`
+5. Check readiness:
+   - `npm run check:ready`
+6. Start the API:
+   - `npm run dev`
 
-## Frontend
-The frontend expects the API at http://localhost:4000/api by default.
-If you need a different base URL, set it in localStorage under key "uepp_api_base".
+## Health checks
+- `GET /api/health/live` is the Render health check endpoint.
+- `GET /api/health` returns detailed readiness for MongoDB, storage, and M-Pesa.
+- `GET /api/health/ready` returns `200` when the core backend is ready and `503` otherwise.
+- Set `STRICT_STARTUP=true` if you want startup to fail when MongoDB is unavailable.
 
-Serve the frontend with a local static server to avoid file:// restrictions.
+## Render notes
+- Set the service root directory to `server`.
+- Use `npm install` as the build command.
+- Use `npm start` as the start command.
+- Attach a persistent disk and mount it at the same path you place in `STORAGE_ROOT`.
+- Point the Render health check path to `/api/health/live`.
 
 ## M-Pesa
-Fill the MPESA_* variables in .env and configure the callback URL to:
-  /api/subscriptions/mpesa/callback
+- Configure the Daraja callback URL as:
+  - `/api/subscriptions/mpesa/callback`
+- If `MPESA_CALLBACK_URL` is empty on Render, the app can infer it from `RENDER_EXTERNAL_HOSTNAME`.
 
-The API uses mpesa-node to initiate STK Push requests.
-
-## Notes
-- Uploads are stored in server/storage/uploads and moved to server/storage/papers after approval.
-- Rewards are applied when an upload is approved or when referrals reach 3 signups.
-
-## Admin
-Promote a user to admin in Postgres:
-  UPDATE users SET role = 'admin' WHERE email = 'you@embuni.ac.ke';
+## Storage
+- Uploaded PDFs are stored under `storage/uploads`.
+- Approved PDFs are moved to `storage/papers`.
+- Rejected uploads are deleted from storage to keep the disk clean.

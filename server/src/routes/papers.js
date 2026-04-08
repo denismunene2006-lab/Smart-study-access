@@ -1,74 +1,71 @@
-﻿﻿import express from "express";
+import express from "express";
 import fs from "fs";
 import path from "path";
-import { query } from "../db.js";
+import { Paper } from "../models.js";
 import { authRequired } from "../middleware/auth.js";
+import { storageRoot } from "../paths.js";
 import { computeAccess } from "../utils/access.js";
 
 const router = express.Router();
 
-function buildWhere({ courseCode, year, examType, search }) {
-  const clauses = [];
-  const values = [];
-  let idx = 1;
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildFilters({ courseCode, year, examType, search }) {
+  const filters = {};
 
   if (courseCode) {
-    clauses.push(`course_code = $${idx++}`);
-    values.push(courseCode);
-  }
-  if (year) {
-    clauses.push(`year = $${idx++}`);
-    values.push(Number(year));
-  }
-  if (examType) {
-    clauses.push(`exam_type = $${idx++}`);
-    values.push(examType);
-  }
-  if (search) {
-    clauses.push(`LOWER(course_code) LIKE $${idx++}`);
-    values.push(`%${search.toLowerCase()}%`);
+    filters.courseCode = new RegExp(`^${escapeRegExp(String(courseCode).trim())}$`, "i");
   }
 
+  if (year) {
+    filters.year = Number(year);
+  }
+
+  if (examType) {
+    filters.examType = String(examType).trim();
+  }
+
+  if (search) {
+    const pattern = new RegExp(escapeRegExp(String(search).trim()), "i");
+    filters.$or = [
+      { courseCode: pattern },
+      { courseName: pattern },
+      { title: pattern }
+    ];
+  }
+
+  return filters;
+}
+
+function mapPaper(paper) {
   return {
-    where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
-    values
+    id: paper.id,
+    courseCode: paper.courseCode,
+    unitName: paper.title || paper.courseName,
+    courseName: paper.courseName,
+    year: paper.year,
+    examType: paper.examType,
+    pages: null,
+    views: paper.views || 0
   };
 }
 
 router.get("/", async (req, res) => {
-  const { courseCode, year, examType, search } = req.query;
-  const { where, values } = buildWhere({ courseCode, year, examType, search });
-  const rows = await query(`SELECT * FROM papers ${where} ORDER BY year DESC`, values);
-
-  const papers = rows.map((paper) => ({
-    id: paper.id,
-    courseCode: paper.course_code,
-    courseName: paper.course_name,
-    year: paper.year,
-    examType: paper.exam_type,
-    pages: null,
-    views: paper.views
-  }));
-
-  return res.json({ papers });
+  const filters = buildFilters(req.query || {});
+  const papers = await Paper.find(filters).sort({ year: -1, createdAt: -1 }).lean();
+  return res.json({ papers: papers.map((paper) => mapPaper({ ...paper, id: paper._id.toString() })) });
 });
 
 router.get("/:id", async (req, res) => {
-  const rows = await query("SELECT * FROM papers WHERE id = $1", [req.params.id]);
-  const paper = rows[0];
+  const paper = await Paper.findById(req.params.id).lean();
   if (!paper) {
     return res.status(404).json({ error: "Paper not found" });
   }
-  return res.json({
-    paper: {
-      id: paper.id,
-      courseCode: paper.course_code,
-      courseName: paper.course_name,
-      year: paper.year,
-      examType: paper.exam_type,
-      views: paper.views
-    }
-  });
+
+  const mapped = mapPaper({ ...paper, id: paper._id.toString() });
+  return res.json({ paper: mapped });
 });
 
 router.get("/:id/stream", authRequired, async (req, res) => {
@@ -77,14 +74,12 @@ router.get("/:id/stream", authRequired, async (req, res) => {
     return res.status(403).json({ error: "Subscription required" });
   }
 
-  const rows = await query("SELECT * FROM papers WHERE id = $1", [req.params.id]);
-  const paper = rows[0];
+  const paper = await Paper.findById(req.params.id);
   if (!paper) {
     return res.status(404).json({ error: "Paper not found" });
   }
 
-  const storageRoot = path.resolve(process.cwd(), "storage");
-  const absolutePath = path.resolve(storageRoot, paper.file_path);
+  const absolutePath = path.resolve(storageRoot, paper.filePath);
   if (!absolutePath.startsWith(storageRoot)) {
     return res.status(400).json({ error: "Invalid file path" });
   }
@@ -93,10 +88,11 @@ router.get("/:id/stream", authRequired, async (req, res) => {
     return res.status(404).json({ error: "File missing" });
   }
 
-  await query("UPDATE papers SET views = views + 1 WHERE id = $1", [paper.id]);
+  await Paper.findByIdAndUpdate(paper._id, { $inc: { views: 1 } });
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="${paper.course_code}-${paper.year}.pdf"`);
+  res.setHeader("Content-Disposition", `inline; filename="${paper.courseCode}-${paper.year}.pdf"`);
+  res.setHeader("Cache-Control", "private, no-store");
   const stream = fs.createReadStream(absolutePath);
   return stream.pipe(res);
 });

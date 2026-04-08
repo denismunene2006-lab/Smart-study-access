@@ -1,6 +1,6 @@
-﻿import jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { config } from "../config.js";
-import { query } from "../db.js";
+import { User } from "../models.js";
 
 export async function authRequired(req, res, next) {
   const header = req.headers.authorization || "";
@@ -11,11 +11,11 @@ export async function authRequired(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    const rows = await query("SELECT * FROM users WHERE id = $1", [decoded.sub]);
-    const user = rows[0];
+    const user = await User.findById(decoded.sub);
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
+
     req.user = user;
     return next();
   } catch (error) {
@@ -27,5 +27,6 @@ export function adminRequired(req, res, next) {
   if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ error: "Admin access required" });
   }
+
   return next();
 }

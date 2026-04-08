@@ -1,102 +1,26 @@
-﻿﻿const API_BASE = localStorage.getItem("uepp_api_base") || "http://localhost:4000/api";
+const LOCAL_API_BASE =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:4000/api"
+    : "";
+const API_BASE = (
+  (window.__UEPP_CONFIG__?.apiBaseUrl || "").trim() ||
+  (localStorage.getItem("uepp_api_base") || "").trim() ||
+  LOCAL_API_BASE
+).replace(/\/$/, "");
+
 const TOKEN_KEY = "uepp_token";
 const SEARCH_KEY = "uepp_search_query";
-const MODE_KEY = "uepp_mode";
 const THEME_KEY = "uepp_theme";
-const LOCAL_MODE = (localStorage.getItem(MODE_KEY) || "local") === "local";
-const LOCAL_KEYS = {
-  users: "uepp_local_users",
-  currentUser: "uepp_local_current_user",
-  transactions: "uepp_local_transactions",
-  uploads: "uepp_local_uploads",
-  papers: "uepp_local_papers"
-};
-
-const LOCAL_PAPERS_SEED = [
-  {
-    id: "civ101-2024-cat1",
-    courseCode: "CIV 101",
-    unitName: "Statics",
-    courseName: "Civil Engineering",
-    year: 2024,
-    examType: "CAT 1",
-    pages: 6,
-    views: 124
-  },
-  {
-    id: "eee202-2023-end",
-    courseCode: "EEE 202",
-    unitName: "Circuits II",
-    courseName: "Electrical Engineering",
-    year: 2023,
-    examType: "Main Exam",
-    pages: 9,
-    views: 188
-  },
-  {
-    id: "acc110-2022-end",
-    courseCode: "ACC 110",
-    unitName: "Financial Accounting",
-    courseName: "Business Administration",
-    year: 2022,
-    examType: "Main Exam",
-    pages: 12,
-    views: 142
-  },
-  {
-    id: "edu210-2024-cat2",
-    courseCode: "EDU 210",
-    unitName: "Curriculum Studies",
-    courseName: "Nursing Education",
-    year: 2024,
-    examType: "CAT 2",
-    pages: 7,
-    views: 96
-  },
-  {
-    id: "agr130-2023-end",
-    courseCode: "AGR 130",
-    unitName: "Plant Physiology",
-    courseName: "Agriculture",
-    year: 2023,
-    examType: "Main Exam",
-    pages: 10,
-    views: 105
-  },
-  {
-    id: "nur240-2021-sup",
-    courseCode: "NUR 240",
-    unitName: "Community Health",
-    courseName: "Nursing",
-    year: 2021,
-    examType: "Supplementary",
-    pages: 8,
-    views: 77
-  },
-  {
-    id: "cs211-2024-end",
-    courseCode: "CS 211",
-    unitName: "Data Structures",
-    courseName: "Computer Science",
-    year: 2024,
-    examType: "Main Exam",
-    pages: 11,
-    views: 221
-  },
-  {
-    id: "cs101-2022-cat1",
-    courseCode: "CS 101",
-    unitName: "Intro to Computing",
-    courseName: "Computer Science",
-    year: 2022,
-    examType: "CAT 1",
-    pages: 5,
-    views: 168
-  }
+const LEGACY_KEYS = [
+  "uepp_mode",
+  "uepp_local_users",
+  "uepp_local_current_user",
+  "uepp_local_transactions",
+  "uepp_local_uploads",
+  "uepp_local_papers"
 ];
 
 const state = {
-  users: [],
   currentUser: null,
   access: null,
   papers: [],
@@ -174,35 +98,18 @@ const elements = {
   adminReferrals: get("adminReferrals"),
   adminMostViewed: get("adminMostViewed"),
   adminUploads: get("adminUploads"),
-  demoUserBtn: get("demoUserBtn"),
   currentBlobUrl: null
 };
+
+function clearLegacyDemoData() {
+  LEGACY_KEYS.forEach((key) => localStorage.removeItem(key));
+}
 
 function showToast(message) {
   if (!elements.toast) return;
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
   setTimeout(() => elements.toast.classList.remove("show"), 2800);
-}
-
-function readLocal(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
-  } catch (error) {
-    return fallback;
-  }
-}
-
-function writeLocal(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function addDays(date, days) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
 }
 
 function debounce(func, wait) {
@@ -217,100 +124,34 @@ function debounce(func, wait) {
   };
 }
 
-function computeLocalAccess(user) {
-  if (!user) {
-    return { active: false, daysLeft: 0, accessEndsAt: null };
-  }
-  const trialEnd = user.trialEndsAt ? new Date(user.trialEndsAt) : null;
-  const subEnd = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null;
-  const base = !trialEnd && !subEnd ? null : trialEnd && subEnd ? (trialEnd > subEnd ? trialEnd : subEnd) : trialEnd || subEnd;
-  if (!base) {
-    return { active: false, daysLeft: 0, accessEndsAt: null };
-  }
-  const bonus = Number(user.bonusDays || 0);
-  const accessEndsAt = addDays(base, bonus);
-  const now = new Date();
-  const diff = Math.ceil((accessEndsAt - now) / (1000 * 60 * 60 * 24));
-  return {
-    active: diff > 0,
-    daysLeft: diff > 0 ? diff : 0,
-    accessEndsAt
-  };
+function formatDate(value) {
+  if (!value) return "-";
+  const date = typeof value === "string" ? new Date(value) : value;
+  return date.toLocaleDateString("en-KE", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
 }
 
-function generateReferralCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
+function humanizeStatus(value) {
+  if (!value) return "-";
+  const text = String(value);
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 }
 
-function computeAdminLocal() {
-  const activeSubscriptions = state.users.filter((user) => {
-    if (!user.subscriptionEndsAt) return false;
-    return new Date(user.subscriptionEndsAt) > new Date();
-  }).length;
-  const totalReferrals = state.users.reduce(
-    (sum, user) => sum + (user.referralCycles || 0) * 3 + (user.referralProgress || 0),
-    0
+function ensureApiConfigured() {
+  if (API_BASE) return;
+  throw new Error(
+    "API base URL is not configured. Set FRONTEND_API_BASE for Vercel or uepp_api_base in localStorage."
   );
-  const mostViewed = [...state.papers]
-    .sort((a, b) => (b.views || 0) - (a.views || 0))
-    .slice(0, 3)
-    .map((paper) => ({ courseCode: paper.courseCode, views: paper.views || 0 }));
-  const pendingUploads = state.uploads
-    .filter((upload) => upload.status === "Pending")
-    .map((upload) => ({
-      id: upload.id,
-      title: upload.title,
-      courseCode: upload.courseCode,
-      createdAt: upload.createdAt
-    }));
-
-  return {
-    activeSubscriptions,
-    totalReferrals,
-    mostViewed,
-    pendingUploads
-  };
-}
-
-function loadLocalState() {
-  state.users = readLocal(LOCAL_KEYS.users, []);
-  state.transactions = readLocal(LOCAL_KEYS.transactions, []);
-  state.uploads = readLocal(LOCAL_KEYS.uploads, []);
-  state.papers = readLocal(LOCAL_KEYS.papers, LOCAL_PAPERS_SEED);
-
-  const currentId = localStorage.getItem(LOCAL_KEYS.currentUser);
-  state.currentUser = state.users.find((user) => user.id === currentId) || null;
-  state.access = computeLocalAccess(state.currentUser);
-  state.referralCode = state.currentUser?.referralCode || null;
-  state.admin = computeAdminLocal();
-}
-
-function saveLocalState() {
-  writeLocal(LOCAL_KEYS.users, state.users);
-  writeLocal(LOCAL_KEYS.transactions, state.transactions);
-  writeLocal(LOCAL_KEYS.uploads, state.uploads);
-  writeLocal(LOCAL_KEYS.papers, state.papers);
-  if (state.currentUser) {
-    localStorage.setItem(LOCAL_KEYS.currentUser, state.currentUser.id);
-  } else {
-    localStorage.removeItem(LOCAL_KEYS.currentUser);
-  }
-  state.access = computeLocalAccess(state.currentUser);
-  state.referralCode = state.currentUser?.referralCode || null;
-  state.admin = computeAdminLocal();
 }
 
 function getToken() {
-  if (LOCAL_MODE) {
-    return state.currentUser ? "local" : null;
-  }
   return localStorage.getItem(TOKEN_KEY);
 }
 
 function setToken(token) {
-  if (LOCAL_MODE) {
-    return;
-  }
   if (token) {
     localStorage.setItem(TOKEN_KEY, token);
   } else {
@@ -319,21 +160,18 @@ function setToken(token) {
 }
 
 function clearSession() {
-  if (LOCAL_MODE) {
-    state.currentUser = null;
-    state.access = null;
-    saveLocalState();
-  } else {
-    setToken(null);
-    state.currentUser = null;
-    state.access = null;
-  }
+  setToken(null);
+  state.currentUser = null;
+  state.access = null;
+  state.transactions = [];
+  state.uploads = [];
+  state.admin = null;
+  state.referralCode = null;
 }
 
 async function apiFetch(path, options = {}) {
-  if (LOCAL_MODE) {
-    throw new Error("API is disabled in local mode.");
-  }
+  ensureApiConfigured();
+
   const token = getToken();
   const headers = { ...(options.headers || {}) };
   if (!(options.body instanceof FormData)) {
@@ -358,17 +196,14 @@ async function apiFetch(path, options = {}) {
   const payload = isJson ? await response.json().catch(() => null) : await response.text();
 
   if (!response.ok) {
-    const message = payload?.error || payload?.message || response.statusText;
-    throw new Error(message);
+    throw new Error(payload?.error || payload?.message || response.statusText);
   }
 
   return payload;
 }
 
 async function apiBlob(path) {
-  if (LOCAL_MODE) {
-    throw new Error("API is disabled in local mode.");
-  }
+  ensureApiConfigured();
   const token = getToken();
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const response = await fetch(`${API_BASE}${path}`, { headers });
@@ -378,23 +213,17 @@ async function apiBlob(path) {
       const payload = await response.json();
       message = payload?.error || message;
     } catch (error) {
-      // ignore json parse
+      // ignore json parse error
     }
     throw new Error(message);
   }
-  return await response.blob();
-}
-
-function formatDate(value) {
-  if (!value) return "-";
-  const date = typeof value === "string" ? new Date(value) : value;
-  return date.toLocaleDateString("en-KE", { year: "numeric", month: "short", day: "numeric" });
+  return response.blob();
 }
 
 function loadSearch() {
   const params = new URLSearchParams(window.location.search);
   const query = params.get("q");
-  const stored = query !== null ? query : (localStorage.getItem(SEARCH_KEY) || "");
+  const stored = query !== null ? query : localStorage.getItem(SEARCH_KEY) || "";
   if (query !== null) {
     localStorage.setItem(SEARCH_KEY, query);
   }
@@ -476,30 +305,24 @@ function performNavSearch() {
   syncSearch(value);
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
   if (currentPath !== "library.html") {
-    const target = value ? `library.html?q=${encodeURIComponent(value)}` : "library.html";
-    window.location.href = target;
+    window.location.href = value ? `library.html?q=${encodeURIComponent(value)}` : "library.html";
     return;
   }
-  const nextUrl = value ? `library.html?q=${encodeURIComponent(value)}` : "library.html";
-  window.history.replaceState({}, "", nextUrl);
+  window.history.replaceState({}, "", value ? `library.html?q=${encodeURIComponent(value)}` : "library.html");
 }
 
 function performLibrarySearch() {
   if (!elements.searchInput) return;
-  const value = elements.searchInput.value.trim();
-  syncSearch(value);
+  syncSearch(elements.searchInput.value.trim());
 }
 
 async function fetchMe() {
-  if (LOCAL_MODE) {
-    loadLocalState();
-    return;
-  }
   if (!getToken()) {
     state.currentUser = null;
     state.access = null;
     return;
   }
+
   try {
     const data = await apiFetch("/auth/me");
     state.currentUser = data.user;
@@ -511,23 +334,16 @@ async function fetchMe() {
 }
 
 async function fetchPapers() {
-  if (LOCAL_MODE) {
-    state.papers = readLocal(LOCAL_KEYS.papers, LOCAL_PAPERS_SEED);
-    return;
-  }
   try {
     const data = await apiFetch("/papers");
     state.papers = data.papers || [];
   } catch (error) {
-    showToast("Unable to load papers.");
+    state.papers = [];
+    showToast(error.message || "Unable to load papers.");
   }
 }
 
 async function fetchTransactions() {
-  if (LOCAL_MODE) {
-    state.transactions = readLocal(LOCAL_KEYS.transactions, []);
-    return;
-  }
   if (!getToken() || !elements.transactionList) return;
   try {
     const data = await apiFetch("/transactions/my");
@@ -538,10 +354,6 @@ async function fetchTransactions() {
 }
 
 async function fetchUploads() {
-  if (LOCAL_MODE) {
-    state.uploads = readLocal(LOCAL_KEYS.uploads, []);
-    return;
-  }
   if (!getToken() || !elements.myUploads) return;
   try {
     const data = await apiFetch("/uploads/my");
@@ -552,11 +364,7 @@ async function fetchUploads() {
 }
 
 async function fetchAdmin() {
-  if (LOCAL_MODE) {
-    loadLocalState();
-    return;
-  }
-  if (!getToken() || !elements.adminActiveSubs) return;
+  if (!getToken() || !elements.adminActiveSubs || state.currentUser?.role !== "admin") return;
   try {
     const data = await apiFetch("/admin/metrics");
     state.admin = data;
@@ -566,10 +374,6 @@ async function fetchAdmin() {
 }
 
 async function fetchReferralCode() {
-  if (LOCAL_MODE) {
-    state.referralCode = state.currentUser?.referralCode || null;
-    return;
-  }
   if (!getToken() || !elements.referralCode) return;
   try {
     const data = await apiFetch("/referrals/code");
@@ -591,61 +395,10 @@ async function signUp() {
     return;
   }
 
-  if (LOCAL_MODE) {
-    loadLocalState();
-    const exists = state.users.some((user) => user.email === email || user.studentId === studentId);
-    if (exists) {
-      showToast("Account already exists. Please login.");
-      return;
-    }
-
-    const now = new Date();
-    const user = {
-      id: `user_${Math.random().toString(36).slice(2, 10)}`,
-      name,
-      email,
-      studentId,
-      password,
-      role: "student",
-      trialEndsAt: addDays(now, 7).toISOString(),
-      subscriptionEndsAt: null,
-      bonusDays: 0,
-      referralProgress: 0,
-      referralCycles: 0,
-      referralCode: generateReferralCode(),
-      createdAt: now.toISOString()
-    };
-
-    if (referralCode) {
-      const referrer = state.users.find((u) => u.referralCode === referralCode);
-      if (referrer) {
-        referrer.referralProgress = (referrer.referralProgress || 0) + 1;
-        if (referrer.referralProgress >= 3) {
-          referrer.referralProgress = 0;
-          referrer.referralCycles = (referrer.referralCycles || 0) + 1;
-          referrer.bonusDays = (referrer.bonusDays || 0) + 7;
-        }
-      }
-    }
-
-    state.users.push(user);
-    state.currentUser = user;
-    saveLocalState();
-    showToast("Welcome! Your 7-day trial starts now.");
-    updateUI();
-    return;
-  }
-
   try {
     const data = await apiFetch("/auth/signup", {
       method: "POST",
-      body: JSON.stringify({
-        name,
-        email,
-        studentId,
-        password,
-        referralCode: referralCode || null
-      })
+      body: JSON.stringify({ name, email, studentId, password, referralCode: referralCode || null })
     });
     setToken(data.token);
     await fetchMe();
@@ -664,21 +417,7 @@ async function login() {
     showToast("Enter your login details.");
     return;
   }
-  if (LOCAL_MODE) {
-    loadLocalState();
-    const user = state.users.find(
-      (u) => (u.email === id || u.studentId === id) && u.password === password
-    );
-    if (!user) {
-      showToast("Login failed. Check your details.");
-      return;
-    }
-    state.currentUser = user;
-    saveLocalState();
-    showToast("Logged in successfully.");
-    updateUI();
-    return;
-  }
+
   try {
     const data = await apiFetch("/auth/login", {
       method: "POST",
@@ -712,29 +451,13 @@ async function paySubscription() {
     showToast("Please login first.");
     return;
   }
+
   const phone = elements.mpesaPhone?.value.trim() || "";
   if (!phone) {
     showToast("Enter your M-Pesa phone number.");
     return;
   }
-  if (LOCAL_MODE) {
-    const now = new Date();
-    const currentEnd = state.currentUser?.subscriptionEndsAt ? new Date(state.currentUser.subscriptionEndsAt) : null;
-    const base = currentEnd && currentEnd > now ? currentEnd : now;
-    const newEnd = addDays(base, 30);
-    state.currentUser.subscriptionEndsAt = newEnd.toISOString();
-    state.transactions.unshift({
-      id: `txn_${Math.random().toString(36).slice(2, 10)}`,
-      amount: 30,
-      method: "M-Pesa (Local)",
-      status: "Success",
-      createdAt: now.toISOString()
-    });
-    saveLocalState();
-    showToast("Payment recorded locally. Access extended by 30 days.");
-    updateUI();
-    return;
-  }
+
   try {
     await apiFetch("/subscriptions/mpesa", {
       method: "POST",
@@ -759,11 +482,12 @@ function renderTransactions() {
     elements.transactionList.textContent = "No transactions yet.";
     return;
   }
+
   elements.transactionList.innerHTML = state.transactions
     .slice(0, 4)
     .map((txn) => `
       <div style="margin-bottom:8px;">
-        <div><strong>${txn.amount} Ksh</strong> - ${txn.status}</div>
+        <div><strong>${txn.amount} Ksh</strong> - ${humanizeStatus(txn.status)}</div>
         <div style="font-size:12px; color: rgba(14, 27, 22, 0.6);">${formatDate(txn.createdAt)} via ${txn.method}</div>
       </div>
     `)
@@ -785,13 +509,14 @@ function fillSelect(select, placeholder, options) {
 }
 
 function buildFilters() {
-  if (!elements.courseFilter || !elements.yearFilter || !elements.typeFilter) {
-    return;
-  }
-  const unique = (items) => Array.from(new Set(items)).sort();
-  const courses = unique(state.papers.map((p) => p.courseName).filter(Boolean));
-  const years = unique(state.papers.map((p) => p.year));
-  const examTypes = ["CAT 1", "CAT 2", "Main Exam", "Supplementary"];
+  if (!elements.courseFilter || !elements.yearFilter || !elements.typeFilter) return;
+
+  const courses = Array.from(new Set(state.papers.map((paper) => paper.courseName).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b));
+  const years = Array.from(new Set(state.papers.map((paper) => paper.year).filter(Boolean)))
+    .sort((a, b) => Number(b) - Number(a));
+  const examTypes = Array.from(new Set(state.papers.map((paper) => paper.examType).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b));
 
   fillSelect(elements.courseFilter, "All courses", courses);
   fillSelect(elements.yearFilter, "All years", years);
@@ -827,19 +552,22 @@ function renderLibrary() {
   });
 
   const queryLabel = rawSearch ? ` for "${rawSearch}"` : "";
-  const filterLabel = activeFilters ? ` • ${activeFilters} filter${activeFilters === 1 ? "" : "s"} active` : "";
+  const filterLabel = activeFilters ? ` | ${activeFilters} filter${activeFilters === 1 ? "" : "s"} active` : "";
   elements.resultCount.textContent = `${filtered.length} papers${queryLabel}${filterLabel}`;
 
   if (filtered.length === 0) {
-    const helper = activeFilters
-      ? "Try clearing filters or adjusting your search."
-      : "Try a different unit name.";
+    const helper = state.papers.length === 0
+      ? "No papers have been published yet."
+      : activeFilters
+        ? "Try clearing filters or adjusting your search."
+        : "Try a different unit name.";
+
     elements.papersGrid.innerHTML = `
       <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
         <p style="font-size: 1.2rem; color: var(--text-muted);">No papers found matching your search criteria.</p>
         <p class="search-hint" style="margin-bottom: 1.5rem;">${helper}</p>
         <div style="display:flex; gap: 12px; justify-content:center; flex-wrap: wrap;">
-          <button class="btn btn-demo" type="button" onclick="clearAllFilters()">Clear Filters</button>
+          <button class="btn btn-browse" type="button" onclick="clearAllFilters()">Clear Filters</button>
           <button class="btn btn-ghost" type="button" onclick="syncSearch('')">Clear Search</button>
         </div>
       </div>
@@ -854,49 +582,15 @@ function renderLibrary() {
       const subtitle = [paper.courseName || "", examLabel].filter(Boolean).join(" | ");
       return `
         <div class="card paper-card reveal" style="transition-delay: ${index * 0.05}s">
-          ${locked ? '<div class="lock">Locked</div>' : ''}
+          ${locked ? '<div class="lock">Locked</div>' : ""}
           <h3>${paper.courseCode || ""} - ${paper.unitName || ""}</h3>
           <p>${subtitle}</p>
-          <div class="paper-meta">${paper.pages || ""} ${paper.pages ? "pages |" : ""} ${paper.views || 0} views</div>
+          <div class="paper-meta">${paper.views || 0} views</div>
           <button class="btn btn-open" type="button" onclick="openViewer('${paper.id}')">Open Paper</button>
         </div>
       `;
     })
     .join("");
-
-  initReveal(); // Re-trigger animations for new elements
-}
-
-function escapePdf(text) {
-  return text.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-}
-
-function buildPdf(text) {
-  const safeText = escapePdf(text);
-  const objects = [];
-  objects.push("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
-  objects.push("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
-  objects.push("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n");
-  const stream = `BT /F1 24 Tf 72 720 Td (${safeText}) Tj ET`;
-  objects.push(`4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
-  objects.push("5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n");
-
-  let pdf = "%PDF-1.4\n";
-  const offsets = [0];
-  objects.forEach((obj) => {
-    offsets.push(pdf.length);
-    pdf += obj;
-  });
-  const xrefStart = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n`;
-  pdf += "0000000000 65535 f \n";
-  for (let i = 1; i < offsets.length; i += 1) {
-    const off = String(offsets[i]).padStart(10, "0");
-    pdf += `${off} 00000 n \n`;
-  }
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
-  pdf += `startxref\n${xrefStart}\n%%EOF`;
-  return new Blob([pdf], { type: "application/pdf" });
 }
 
 async function openViewer(paperId) {
@@ -905,33 +599,30 @@ async function openViewer(paperId) {
     showToast("Start your trial or subscribe to open papers.");
     return;
   }
-  try {
-    const paper = state.papers.find((p) => p.id === paperId);
-    if (LOCAL_MODE && paper) {
-      paper.views = (paper.views || 0) + 1;
-      saveLocalState();
-    }
 
+  try {
+    const paper = state.papers.find((item) => item.id === paperId);
     if (elements.currentBlobUrl) {
       URL.revokeObjectURL(elements.currentBlobUrl);
     }
 
-    const blob = LOCAL_MODE
-      ? buildPdf(`University of Embu Past Paper - ${paper?.courseCode || ""} ${paper?.examType || ""} ${paper?.year || ""}`)
-      : await apiBlob(`/papers/${paperId}/stream`);
-    
-    elements.currentBlobUrl = URL.createObjectURL(blob);
-    const url = elements.currentBlobUrl;
+    const blob = await apiBlob(`/papers/${paperId}/stream`);
+    if (paper) {
+      paper.views = (paper.views || 0) + 1;
+    }
 
+    elements.currentBlobUrl = URL.createObjectURL(blob);
     if (elements.viewerTitle && paper) {
       elements.viewerTitle.textContent = `${paper.courseCode} ${paper.examType}`;
     }
     if (elements.viewerMeta && paper) {
       elements.viewerMeta.textContent = `${paper.courseName || ""} | ${paper.year}`;
     }
-    elements.viewerFrame.src = `${url}#toolbar=0&navpanes=0&scrollbar=0`;
+    elements.viewerFrame.src = `${elements.currentBlobUrl}#toolbar=0&navpanes=0&scrollbar=0`;
     elements.viewerModal.style.display = "flex";
-    setTimeout(() => { elements.viewerModal.style.opacity = "1"; }, 10);
+    setTimeout(() => {
+      elements.viewerModal.style.opacity = "1";
+    }, 10);
     elements.viewerModal.setAttribute("aria-hidden", "false");
   } catch (error) {
     showToast(error.message || "Unable to open paper.");
@@ -964,6 +655,7 @@ async function submitUpload() {
     showToast("Login to upload papers.");
     return;
   }
+
   const title = elements.uploadTitle?.value.trim() || "";
   const course = elements.uploadCourse?.value.trim() || "";
   const courseName = elements.uploadCourseName?.value.trim() || "";
@@ -976,26 +668,6 @@ async function submitUpload() {
     return;
   }
 
-  if (LOCAL_MODE) {
-    const upload = {
-      id: `upl_${Math.random().toString(36).slice(2, 10)}`,
-      title,
-      courseCode: course,
-      courseName: courseName || "",
-      year: Number(year),
-      examType: type,
-      status: "Pending",
-      createdAt: new Date().toISOString(),
-      uploaderId: state.currentUser?.id || null
-    };
-    state.uploads.unshift(upload);
-    saveLocalState();
-    showToast("Upload saved locally for approval.");
-    clearUploadForm();
-    updateUI();
-    return;
-  }
-
   const formData = new FormData();
   formData.append("title", title);
   formData.append("courseCode", course);
@@ -1005,13 +677,11 @@ async function submitUpload() {
   formData.append("file", file);
 
   try {
-    await apiFetch("/uploads", {
-      method: "POST",
-      body: formData
-    });
+    await apiFetch("/uploads", { method: "POST", body: formData });
     showToast("Upload submitted for approval.");
     clearUploadForm();
     await fetchUploads();
+    await fetchAdmin();
     updateUI();
   } catch (error) {
     showToast(error.message || "Upload failed.");
@@ -1023,6 +693,7 @@ async function copyReferralCode() {
     showToast("No referral code available.");
     return;
   }
+
   try {
     await navigator.clipboard.writeText(state.referralCode);
     showToast("Referral code copied.");
@@ -1041,11 +712,12 @@ function renderUploads() {
     elements.myUploads.textContent = "No uploads yet.";
     return;
   }
+
   elements.myUploads.innerHTML = state.uploads
     .map((upload) => `
       <div style="margin-bottom:8px;">
         <strong>${upload.title}</strong>
-        <div style="font-size:12px; color: rgba(14, 27, 22, 0.6);">${upload.status} - ${formatDate(upload.createdAt)}</div>
+        <div style="font-size:12px; color: rgba(14, 27, 22, 0.6);">${humanizeStatus(upload.status)} - ${formatDate(upload.createdAt)}</div>
       </div>
     `)
     .join("");
@@ -1053,6 +725,13 @@ function renderUploads() {
 
 function renderAdmin() {
   if (!elements.adminActiveSubs || !elements.adminReferrals || !elements.adminMostViewed || !elements.adminUploads) return;
+  if (state.currentUser?.role !== "admin") {
+    elements.adminActiveSubs.textContent = "0";
+    elements.adminReferrals.textContent = "0";
+    elements.adminMostViewed.textContent = "Admin account required.";
+    elements.adminUploads.textContent = "Admin account required.";
+    return;
+  }
   if (!state.admin) {
     elements.adminActiveSubs.textContent = "0";
     elements.adminReferrals.textContent = "0";
@@ -1063,7 +742,6 @@ function renderAdmin() {
 
   elements.adminActiveSubs.textContent = state.admin.activeSubscriptions || 0;
   elements.adminReferrals.textContent = state.admin.totalReferrals || 0;
-
   elements.adminMostViewed.innerHTML = (state.admin.mostViewed || [])
     .map((paper) => `<div style="margin-bottom:6px;">${paper.courseCode} - ${paper.views} views</div>`)
     .join("") || "No data yet.";
@@ -1088,41 +766,12 @@ function renderAdmin() {
 }
 
 async function approveUpload(uploadId) {
-  if (LOCAL_MODE) {
-    const upload = state.uploads.find((item) => item.id === uploadId);
-    if (!upload) {
-      showToast("Upload not found.");
-      return;
-    }
-    upload.status = "Approved";
-    const newPaper = {
-      id: `paper_${Math.random().toString(36).slice(2, 10)}`,
-      courseCode: upload.courseCode,
-      unitName: upload.title,
-      courseName: upload.courseName || "General",
-      year: upload.year,
-      examType: upload.examType,
-      pages: null,
-      views: 0
-    };
-    state.papers.unshift(newPaper);
-    if (upload.uploaderId) {
-      const uploader = state.users.find((u) => u.id === upload.uploaderId);
-      if (uploader) {
-        uploader.bonusDays = (uploader.bonusDays || 0) + 2;
-      }
-    }
-    saveLocalState();
-    showToast("Upload approved.");
-    buildFilters();
-    updateUI();
-    return;
-  }
   try {
     await apiFetch(`/admin/uploads/${uploadId}/approve`, { method: "PATCH" });
     showToast("Upload approved.");
     await fetchAdmin();
     await fetchPapers();
+    await fetchUploads();
     buildFilters();
     renderLibrary();
     renderAdmin();
@@ -1132,23 +781,13 @@ async function approveUpload(uploadId) {
 }
 
 async function rejectUpload(uploadId) {
-  if (LOCAL_MODE) {
-    const upload = state.uploads.find((item) => item.id === uploadId);
-    if (!upload) {
-      showToast("Upload not found.");
-      return;
-    }
-    upload.status = "Rejected";
-    saveLocalState();
-    showToast("Upload rejected.");
-    updateUI();
-    return;
-  }
   try {
     await apiFetch(`/admin/uploads/${uploadId}/reject`, { method: "PATCH" });
     showToast("Upload rejected.");
     await fetchAdmin();
+    await fetchUploads();
     renderAdmin();
+    renderUploads();
   } catch (error) {
     showToast(error.message || "Rejection failed.");
   }
@@ -1213,33 +852,16 @@ function updateUI() {
   }
 
   if (elements.profileDetails) {
-    elements.profileDetails.textContent = hasUser
-      ? `Account: ${user.email}`
-      : "Login to see your trial and subscription dates.";
+    elements.profileDetails.textContent = hasUser ? `Account: ${user.email}` : "Login to see your trial and subscription dates.";
   }
 
-  if (elements.trialEnd) {
-    elements.trialEnd.textContent = hasUser ? formatDate(user.trialEndsAt) : "-";
-  }
-  if (elements.subEnd) {
-    elements.subEnd.textContent = hasUser ? formatDate(user.subscriptionEndsAt) : "-";
-  }
-  if (elements.bonusDays) {
-    elements.bonusDays.textContent = hasUser ? user.bonusDays : 0;
-  }
-  if (elements.accessUntil) {
-    elements.accessUntil.textContent = hasUser ? formatDate(access.accessEndsAt) : "-";
-  }
-
-  if (elements.uploadBonus) {
-    elements.uploadBonus.textContent = hasUser ? user.bonusDays : 0;
-  }
-  if (elements.referralProgress) {
-    elements.referralProgress.textContent = hasUser ? user.referralProgress : 0;
-  }
-  if (elements.referralCode) {
-    elements.referralCode.textContent = state.referralCode || "-";
-  }
+  if (elements.trialEnd) elements.trialEnd.textContent = hasUser ? formatDate(user.trialEndsAt) : "-";
+  if (elements.subEnd) elements.subEnd.textContent = hasUser ? formatDate(user.subscriptionEndsAt) : "-";
+  if (elements.bonusDays) elements.bonusDays.textContent = hasUser ? user.bonusDays : 0;
+  if (elements.accessUntil) elements.accessUntil.textContent = hasUser ? formatDate(access.accessEndsAt) : "-";
+  if (elements.uploadBonus) elements.uploadBonus.textContent = hasUser ? user.bonusDays : 0;
+  if (elements.referralProgress) elements.referralProgress.textContent = hasUser ? user.referralProgress : 0;
+  if (elements.referralCode) elements.referralCode.textContent = state.referralCode || "-";
 
   renderTransactions();
   renderLibrary();
@@ -1248,41 +870,10 @@ function updateUI() {
   buildSearchSuggestions();
 }
 
-function demoUser() {
-  if (!LOCAL_MODE) {
-    showToast("Demo users are disabled in the real build.");
-    return;
-  }
-  loadLocalState();
-  const demoId = `demo_${Math.random().toString(36).slice(2, 6)}`;
-  const now = new Date();
-  const user = {
-    id: `user_${demoId}`,
-    name: "Demo Student",
-    email: `${demoId}@embuni.ac.ke`,
-    studentId: `UEB/DEMO/${demoId.toUpperCase()}`,
-    password: "demo123",
-    role: "student",
-    trialEndsAt: addDays(now, 7).toISOString(),
-    subscriptionEndsAt: null,
-    bonusDays: 0,
-    referralProgress: 0,
-    referralCycles: 0,
-    referralCode: generateReferralCode(),
-    createdAt: now.toISOString()
-  };
-  state.users.push(user);
-  state.currentUser = user;
-  saveLocalState();
-  showToast("Demo account created. Password: demo123");
-  updateUI();
-}
-
 function initTheme() {
   const saved = localStorage.getItem(THEME_KEY) || "light";
   document.documentElement.setAttribute("data-theme", saved);
-  const btn = get("themeToggle");
-  if (btn) btn.textContent = saved === "dark" ? "☀️" : "🌙";
+  syncThemeToggle(saved);
 }
 
 function toggleTheme() {
@@ -1290,8 +881,17 @@ function toggleTheme() {
   const next = current === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
   localStorage.setItem(THEME_KEY, next);
+  syncThemeToggle(next);
+}
+
+function syncThemeToggle(theme) {
   const btn = get("themeToggle");
-  if (btn) btn.textContent = next === "dark" ? "☀️" : "🌙";
+  if (!btn) return;
+
+  const isDark = theme === "dark";
+  btn.textContent = isDark ? "\u2600" : "\u263E";
+  btn.setAttribute("title", isDark ? "Switch to Light Mode" : "Switch to Dark Mode");
+  btn.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
 }
 
 function setMobileNav(isOpen) {
@@ -1302,17 +902,11 @@ function setMobileNav(isOpen) {
 
 function setActiveNavLink() {
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
-  document.querySelectorAll(".primary-nav a, .mobile-nav a").forEach(link => {
+  document.querySelectorAll(".primary-nav a, .mobile-nav a").forEach((link) => {
     if (link.getAttribute("href") === currentPath) {
       link.classList.add("active");
     }
   });
-}
-
-function setBtnLoading(btn, isLoading) {
-  if (!btn) return;
-  if (isLoading) btn.classList.add("loading");
-  else btn.classList.remove("loading");
 }
 
 function wireEvents() {
@@ -1348,7 +942,6 @@ function wireEvents() {
   on(elements.yearFilter, "change", renderLibrary);
   on(elements.typeFilter, "change", renderLibrary);
   on(elements.copyReferralBtn, "click", copyReferralCode);
-  on(elements.demoUserBtn, "click", demoUser);
   on(get("themeToggle"), "click", toggleTheme);
   on(elements.navToggle, "click", () => {
     const isOpen = elements.mobileNav?.classList.contains("open");
@@ -1358,12 +951,10 @@ function wireEvents() {
   if (elements.uploadCourse) {
     on(elements.uploadCourse, "input", () => {
       elements.uploadCourse.value = elements.uploadCourse.value.toUpperCase();
-      const code = elements.uploadCourse.value;
-      if (code.length >= 3) {
-        const match = state.papers.find(p => p.courseCode.replace(/\s+/g, '') === code.replace(/\s+/g, ''));
-        if (match && elements.uploadCourseName && !elements.uploadCourseName.value) {
-          elements.uploadCourseName.value = match.courseName;
-        }
+      const code = elements.uploadCourse.value.replace(/\s+/g, "");
+      const match = state.papers.find((paper) => (paper.courseCode || "").replace(/\s+/g, "") === code);
+      if (match && elements.uploadCourseName && !elements.uploadCourseName.value) {
+        elements.uploadCourseName.value = match.courseName;
       }
     });
   }
@@ -1374,9 +965,7 @@ function wireEvents() {
   }
 
   if (elements.mobileNav) {
-    elements.mobileNav.querySelectorAll("a").forEach((link) => {
-      on(link, "click", () => setMobileNav(false));
-    });
+    elements.mobileNav.querySelectorAll("a").forEach((link) => on(link, "click", () => setMobileNav(false)));
   }
 
   document.addEventListener("click", (event) => {
@@ -1389,6 +978,9 @@ function wireEvents() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       setMobileNav(false);
+      if (elements.viewerModal?.style.display === "flex") {
+        closeViewer();
+      }
     }
   });
 
@@ -1396,12 +988,13 @@ function wireEvents() {
     on(btn, "click", () => {
       const targetId = btn.getAttribute("data-target");
       const input = get(targetId);
+      if (!input) return;
       if (input.type === "password") {
         input.type = "text";
-        btn.textContent = "👁️";
+        btn.textContent = "Hide";
       } else {
         input.type = "password";
-        btn.textContent = "🙈";
+        btn.textContent = "Show";
       }
     });
   });
@@ -1416,41 +1009,42 @@ function wireEvents() {
       }
     });
     document.addEventListener("keydown", (event) => {
-      if (elements.viewerModal.style.display === "flex") {
-        if ((event.ctrlKey || event.metaKey) && (event.key === "s" || event.key === "p")) {
-          event.preventDefault();
-        }
+      if (
+        elements.viewerModal.style.display === "flex" &&
+        (event.ctrlKey || event.metaKey) &&
+        (event.key === "s" || event.key === "p")
+      ) {
+        event.preventDefault();
       }
     });
   }
 }
 
 function initReveal() {
+  if (!("IntersectionObserver" in window)) {
+    document.querySelectorAll(".reveal").forEach((el) => el.classList.add("active"));
+    return;
+  }
+
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       if (entry.isIntersecting) {
-        entry.target.classList.add('active');
+        entry.target.classList.add("active");
       }
     });
   }, { threshold: 0.1 });
 
-  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
 }
 
 async function bootstrap() {
+  clearLegacyDemoData();
   loadSearch();
   initTheme();
   setActiveNavLink();
   wireEvents();
   setTimeout(initReveal, 100);
 
-  if (LOCAL_MODE) {
-    localStorage.setItem(MODE_KEY, "local");
-    loadLocalState();
-    buildFilters();
-    updateUI();
-    return;
-  }
   await fetchMe();
   await fetchPapers();
   buildFilters();
@@ -1460,5 +1054,11 @@ async function bootstrap() {
   await fetchReferralCode();
   updateUI();
 }
+
+window.openViewer = openViewer;
+window.approveUpload = approveUpload;
+window.rejectUpload = rejectUpload;
+window.clearAllFilters = clearAllFilters;
+window.syncSearch = syncSearch;
 
 bootstrap();

@@ -1,0 +1,45 @@
+services:
+  - type: web
+    runtime: node
+    name: embu-past-papers-api
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health/live
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: embu_papers
+      - key: JWT_SECRET
+        sync: false
+      - key: STORAGE_ROOT
+        value: /opt/render/project/src/storage
+      - key: STRICT_STARTUP
+        value: "false"
+      - key: MPESA_ENV
+        value: sandbox
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_SHORTCODE
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_CALLBACK_URL
+        sync: false
+      - key: MPESA_ACCOUNT_REF
+        value: UEPPASTPAPERS
+      - key: MPESA_TRANSACTION_DESC
+        value: Past Papers Subscription
+    disk:
+      name: papers-storage
+      mountPath: /opt/render/project/src/storage
+      sizeGB: 1

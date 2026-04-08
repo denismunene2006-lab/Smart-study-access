@@ -1,6 +1,10 @@
-﻿import express from "express";
+import express from "express";
 import { authRequired } from "../middleware/auth.js";
-import { query } from "../db.js";
+import {
+  Subscription,
+  Transaction,
+  User
+} from "../models.js";
 import { initiateStkPush } from "../services/mpesa.js";
 
 const router = express.Router();
@@ -40,18 +44,15 @@ router.post("/mpesa", authRequired, async (req, res) => {
     amount: 30
   });
 
-  await query(
-    "INSERT INTO transactions (user_id, amount, method, status, checkout_request_id, merchant_request_id, phone_number) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-    [
-      req.user.id,
-      30,
-      "M-Pesa STK Push",
-      "Pending",
-      response.CheckoutRequestID || null,
-      response.MerchantRequestID || null,
-      phoneNumber
-    ]
-  );
+  await Transaction.create({
+    userId: req.user._id,
+    amount: 30,
+    method: "M-Pesa STK Push",
+    status: "Pending",
+    checkoutRequestId: response.CheckoutRequestID || null,
+    merchantRequestId: response.MerchantRequestID || null,
+    phoneNumber
+  });
 
   return res.json({
     message: response.CustomerMessage || "STK push sent",
@@ -65,44 +66,44 @@ router.post("/mpesa/callback", async (req, res) => {
     return res.json({ received: true });
   }
 
-  const txRows = await query(
-    "SELECT * FROM transactions WHERE checkout_request_id = $1 OR merchant_request_id = $2 ORDER BY created_at DESC LIMIT 1",
-    [parsed.checkoutRequestId, parsed.merchantRequestId]
-  );
-  const transaction = txRows[0];
+  const matches = [];
+  if (parsed.checkoutRequestId) {
+    matches.push({ checkoutRequestId: parsed.checkoutRequestId });
+  }
+  if (parsed.merchantRequestId) {
+    matches.push({ merchantRequestId: parsed.merchantRequestId });
+  }
+
+  const transaction = await Transaction.findOne({ $or: matches }).sort({ createdAt: -1 });
+
   if (!transaction) {
     return res.json({ received: true });
   }
 
   const success = Number(parsed.resultCode) === 0;
-  await query(
-    "UPDATE transactions SET status = $1, mpesa_receipt_number = $2, raw_callback = $3 WHERE id = $4",
-    [
-      success ? "Success" : "Failed",
-      parsed.mpesaReceiptNumber || null,
-      req.body || null,
-      transaction.id
-    ]
-  );
+  transaction.status = success ? "Success" : "Failed";
+  transaction.mpesaReceiptNumber = parsed.mpesaReceiptNumber || null;
+  transaction.rawCallback = req.body || null;
+  transaction.phoneNumber = parsed.phoneNumber || transaction.phoneNumber;
+  await transaction.save();
 
   if (success) {
-    const userRows = await query("SELECT * FROM users WHERE id = $1", [transaction.user_id]);
-    const user = userRows[0];
+    const user = await User.findById(transaction.userId);
     if (user) {
       const now = new Date();
-      const currentEnd = user.subscription_ends_at ? new Date(user.subscription_ends_at) : null;
+      const currentEnd = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null;
       const base = currentEnd && currentEnd > now ? currentEnd : now;
       const newEnd = addDays(base, 30);
 
-      await query(
-        "UPDATE users SET subscription_ends_at = $1, updated_at = now() WHERE id = $2",
-        [newEnd, user.id]
-      );
+      user.subscriptionEndsAt = newEnd;
+      await user.save();
 
-      await query(
-        "INSERT INTO subscriptions (user_id, start_at, end_at, status) VALUES ($1, $2, $3, $4)",
-        [user.id, base, newEnd, "active"]
-      );
+      await Subscription.create({
+        userId: user._id,
+        startAt: base,
+        endAt: newEnd,
+        status: "active"
+      });
     }
   }
 

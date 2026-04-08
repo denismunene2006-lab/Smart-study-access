@@ -1,0 +1,7 @@
+{
+  "name": "embu-past-papers-frontend",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-frontend.js"
+  }
+}

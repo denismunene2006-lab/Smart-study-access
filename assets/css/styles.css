@@ -436,15 +436,6 @@ button:hover, .btn:hover {
 .btn-close { background: #334155; color: white; }      /* Slate */
 .btn-approve { background: #22c55e; color: white; }    /* Bright Green */
 .btn-reject { background: #ef4444; color: white; }     /* Red */
-.btn-demo { 
-  background: #f8fafc; 
-  color: #64748b; 
-  border: 1px solid #cbd5e1; 
-}
-.btn-demo:hover {
-  background: #f1f5f9;
-  color: #475569;
-}
 
 .btn.loading {
   color: transparent !important;

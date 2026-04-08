@@ -47,7 +47,7 @@
   <main>
     <section id="admin">
       <div class="section-title">
-        <h2>Admin Dashboard (Prototype)</h2>
+        <h2>Admin Dashboard</h2>
       </div>
       <div class="grid">
         <div class="card">
@@ -77,24 +77,21 @@
 
     <section id="devnotes">
       <div class="section-title">
-        <h2>Backend Blueprint and Extension Notes</h2>
+        <h2>Deployment Notes</h2>
       </div>
       <div class="card">
         <details>
-          <summary style="font-weight:700; cursor:pointer;">Open developer notes</summary>
-          <p>Recommended stack: Node.js (Express) or Django + PostgreSQL + object storage (S3 compatible).</p>
-          <div class="pill">Core tables</div>
-          <p>Users, Papers, Subscriptions, Transactions, Rewards, Referrals, Uploads, AdminActions.</p>
-          <div class="pill">Key API endpoints</div>
-          <p>POST /auth/signup, POST /auth/login, POST /subscriptions/pay, POST /subscriptions/renew, GET /papers, GET /papers/{id}, POST /uploads, PATCH /uploads/{id}/approve, POST /referrals, GET /admin/metrics.</p>
-          <div class="pill">Secure PDF storage</div>
-          <p>Store PDFs in private bucket. Serve through signed URLs and stream in PDF.js with download button disabled. Add watermarks server-side.</p>
-          <div class="pill">Referral bonus extension</div>
-          <p>On each referral signup: increment referral_count. If referral_count % 3 == 0, add reward_days +7 and record in Rewards table.</p>
-          <div class="pill">Upload reward extension</div>
-          <p>After admin approves upload: add reward_days +2, mark reward source = upload_id. Reverse if upload rejected later.</p>
-          <div class="pill">M-Pesa Daraja integration</div>
-          <p>Use STK Push: initiate payment, store CheckoutRequestID, validate callback before extending subscription by 30 days.</p>
+          <summary style="font-weight:700; cursor:pointer;">Open deployment checklist</summary>
+          <div class="pill">Frontend</div>
+          <p>Deploy the static site on Vercel and set the <strong>FRONTEND_API_BASE</strong> environment variable to your Render API URL.</p>
+          <div class="pill">Backend</div>
+          <p>Deploy the Express API on Render from the <strong>server</strong> directory and use <strong>/api/health/live</strong> as the health check path.</p>
+          <div class="pill">Database</div>
+          <p>Connect the backend to MongoDB using <strong>MONGODB_URI</strong> and keep <strong>JWT_SECRET</strong> out of source control.</p>
+          <div class="pill">Storage</div>
+          <p>Attach a persistent disk on Render so uploads and approved papers survive redeploys.</p>
+          <div class="pill">Payments</div>
+          <p>Set the M-Pesa callback URL to <strong>/api/subscriptions/mpesa/callback</strong> on your Render API domain.</p>
         </details>
       </div>
     </section>
@@ -128,11 +125,12 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; 2024 Embu Past Papers Hub. Prototype build for University of Embu students. No real payments are processed in this demo.</p>
+      <p>&copy; 2026 Embu Past Papers Hub. Built for University of Embu students.</p>
     </div>
   </footer>
   <div id="toast" class="toast"></div>
 
+  <script src="assets/js/runtime-config.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>
