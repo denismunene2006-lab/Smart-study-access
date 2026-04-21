@@ -1,15 +1,16 @@
 # Embu Past Papers API
 
 ## Stack
-- Express on Render
-- MongoDB Atlas (or another MongoDB deployment)
+- Express API for Daraja, moderation, and paper streaming
+- Supabase Auth + Postgres + Storage
 - M-Pesa STK Push for payments
-- Persistent disk on Render for uploaded PDFs
 
 ## Local setup
 1. `cd server`
 2. Copy `server/.env.example` to `server/.env`
-3. Update `MONGODB_URI`, `JWT_SECRET`, and the `MPESA_*` values
+3. Update `SUPABASE_*` and `MPESA_*` values
+4. Run the SQL in `server/supabase-schema.sql` in Supabase SQL Editor
+5. Create Supabase Storage buckets: `papers` and `uploads`
 4. Install dependencies:
    - `npm install`
 5. Check readiness:
@@ -18,24 +19,24 @@
    - `npm run dev`
 
 ## Health checks
-- `GET /api/health/live` is the Render health check endpoint.
-- `GET /api/health` returns detailed readiness for MongoDB, storage, and M-Pesa.
+- `GET /api/health/live` is the liveness endpoint.
+- `GET /api/health` returns detailed readiness for Supabase, storage buckets, and M-Pesa.
 - `GET /api/health/ready` returns `200` when the core backend is ready and `503` otherwise.
-- Set `STRICT_STARTUP=true` if you want startup to fail when MongoDB is unavailable.
+- Set `STRICT_STARTUP=true` if you want startup to fail when Supabase is unavailable.
 
-## Render notes
+## Hosting notes
 - Set the service root directory to `server`.
 - Use `npm install` as the build command.
 - Use `npm start` as the start command.
-- Attach a persistent disk and mount it at the same path you place in `STORAGE_ROOT`.
-- Point the Render health check path to `/api/health/live`.
+- Set `API_BASE_URL` so callback URLs can be inferred when needed.
+- Point your host health check path to `/api/health/live`.
 
 ## M-Pesa
 - Configure the Daraja callback URL as:
   - `/api/subscriptions/mpesa/callback`
-- If `MPESA_CALLBACK_URL` is empty on Render, the app can infer it from `RENDER_EXTERNAL_HOSTNAME`.
+- If `MPESA_CALLBACK_URL` is empty, the app can infer it from `API_BASE_URL`.
 
 ## Storage
-- Uploaded PDFs are stored under `storage/uploads`.
-- Approved PDFs are moved to `storage/papers`.
-- Rejected uploads are deleted from storage to keep the disk clean.
+- Uploaded PDFs are stored in Supabase bucket `uploads`.
+- Approved PDFs are copied into Supabase bucket `papers`.
+- Rejected uploads are deleted from the `uploads` bucket.

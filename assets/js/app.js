@@ -143,7 +143,7 @@ function humanizeStatus(value) {
 function ensureApiConfigured() {
   if (API_BASE) return;
   throw new Error(
-    "API base URL is not configured. Set FRONTEND_API_BASE for Vercel or uepp_api_base in localStorage."
+    "API base URL is not configured. Set FRONTEND_API_BASE in Vercel or uepp_api_base in localStorage."
   );
 }
 

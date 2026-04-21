@@ -1,44 +1,79 @@
 import express from "express";
-import fs from "fs";
-import path from "path";
+import { v4 as uuidv4 } from "uuid";
+import { config } from "../config.js";
 import { authRequired, adminRequired } from "../middleware/auth.js";
-import {
-  Paper,
-  Referral,
-  Reward,
-  Upload,
-  User
-} from "../models.js";
-import { papersRoot, storageRoot } from "../paths.js";
+import { getSupabaseAdmin } from "../supabase.js";
 
 const router = express.Router();
 
+async function addBonusDays(supabase, userId, days) {
+  const { data: profile } = await supabase
+    .from(config.profilesTable)
+    .select("id, bonus_days")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile) {
+    return;
+  }
+
+  await supabase
+    .from(config.profilesTable)
+    .update({
+      bonus_days: Number(profile.bonus_days || 0) + days,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", userId);
+}
+
 router.get("/metrics", authRequired, adminRequired, async (req, res) => {
+  const supabase = getSupabaseAdmin();
+  const now = new Date().toISOString();
+
   const [activeSubscriptions, totalReferrals, mostViewed, pendingUploads] = await Promise.all([
-    User.countDocuments({ subscriptionEndsAt: { $gt: new Date() } }),
-    Referral.countDocuments(),
-    Paper.find().sort({ views: -1 }).limit(3).lean(),
-    Upload.find({ status: "pending" }).sort({ createdAt: -1 }).lean()
+    supabase
+      .from(config.profilesTable)
+      .select("id", { count: "exact", head: true })
+      .gt("subscription_ends_at", now),
+    supabase
+      .from(config.referralsTable)
+      .select("id", { count: "exact", head: true }),
+    supabase
+      .from(config.papersTable)
+      .select("course_code, views")
+      .order("views", { ascending: false })
+      .limit(3),
+    supabase
+      .from(config.uploadsTable)
+      .select("id, title, course_code, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
   ]);
 
   return res.json({
-    activeSubscriptions,
-    totalReferrals,
-    mostViewed: mostViewed.map((paper) => ({
-      courseCode: paper.courseCode,
+    activeSubscriptions: activeSubscriptions.count || 0,
+    totalReferrals: totalReferrals.count || 0,
+    mostViewed: (mostViewed.data || []).map((paper) => ({
+      courseCode: paper.course_code,
       views: paper.views || 0
     })),
-    pendingUploads: pendingUploads.map((upload) => ({
-      id: upload._id.toString(),
+    pendingUploads: (pendingUploads.data || []).map((upload) => ({
+      id: upload.id,
       title: upload.title,
-      courseCode: upload.courseCode,
-      createdAt: upload.createdAt
+      courseCode: upload.course_code,
+      createdAt: upload.created_at
     }))
   });
 });
 
 router.patch("/uploads/:id/approve", authRequired, adminRequired, async (req, res) => {
-  const upload = await Upload.findById(req.params.id);
+  const supabase = getSupabaseAdmin();
+  const { data: upload } = await supabase
+    .from(config.uploadsTable)
+    .select("*")
+    .eq("id", req.params.id)
+    .maybeSingle();
+
   if (!upload) {
     return res.status(404).json({ error: "Upload not found" });
   }
@@ -47,41 +82,61 @@ router.patch("/uploads/:id/approve", authRequired, adminRequired, async (req, re
     return res.status(400).json({ error: "Upload already reviewed" });
   }
 
-  const sourcePath = path.resolve(storageRoot, upload.filePath);
-  const fileName = path.basename(upload.filePath);
-  const destPath = path.resolve(papersRoot, fileName);
+  const { data: sourceFile, error: sourceFileError } = await supabase.storage
+    .from(config.uploadsBucket)
+    .download(upload.storage_path);
 
-  if (!fs.existsSync(sourcePath)) {
+  if (sourceFileError || !sourceFile) {
     return res.status(404).json({ error: "Uploaded file is missing" });
   }
 
-  fs.renameSync(sourcePath, destPath);
+  const fileName = `${uuidv4()}.pdf`;
+  const destinationPath = `approved/${fileName}`;
+  const fileBuffer = Buffer.from(await sourceFile.arrayBuffer());
 
-  upload.status = "approved";
-  upload.reviewedBy = req.user._id;
-  upload.reviewedAt = new Date();
-  await upload.save();
+  const { error: uploadPaperError } = await supabase.storage
+    .from(config.papersBucket)
+    .upload(destinationPath, fileBuffer, {
+      contentType: "application/pdf",
+      upsert: false
+    });
 
-  await Paper.create({
+  if (uploadPaperError) {
+    return res.status(500).json({ error: uploadPaperError.message || "Unable to move file" });
+  }
+
+  await supabase.storage.from(config.uploadsBucket).remove([upload.storage_path]);
+
+  await supabase
+    .from(config.uploadsTable)
+    .update({
+      status: "approved",
+      reviewed_by: req.user.id,
+      reviewed_at: new Date().toISOString()
+    })
+    .eq("id", upload.id);
+
+  await supabase.from(config.papersTable).insert({
     title: upload.title,
     faculty: upload.faculty,
     department: upload.department,
-    courseCode: upload.courseCode,
-    courseName: upload.courseName,
+    course_code: upload.course_code,
+    course_name: upload.course_name,
     year: upload.year,
-    examType: upload.examType,
-    filePath: `papers/${fileName}`,
-    uploaderId: upload.uploaderId,
-    approvedBy: req.user._id,
-    approvedAt: new Date()
+    exam_type: upload.exam_type,
+    storage_path: destinationPath,
+    uploader_id: upload.uploader_id,
+    approved_by: req.user.id,
+    approved_at: new Date().toISOString(),
+    views: 0
   });
 
-  if (upload.uploaderId) {
-    await User.findByIdAndUpdate(upload.uploaderId, { $inc: { bonusDays: 2 } });
-    await Reward.create({
-      userId: upload.uploaderId,
-      sourceType: "upload",
-      sourceId: upload.id,
+  if (upload.uploader_id) {
+    await addBonusDays(supabase, upload.uploader_id, 2);
+    await supabase.from(config.rewardsTable).insert({
+      user_id: upload.uploader_id,
+      source_type: "upload",
+      source_id: upload.id,
       days: 2
     });
   }
@@ -90,7 +145,13 @@ router.patch("/uploads/:id/approve", authRequired, adminRequired, async (req, re
 });
 
 router.patch("/uploads/:id/reject", authRequired, adminRequired, async (req, res) => {
-  const upload = await Upload.findById(req.params.id);
+  const supabase = getSupabaseAdmin();
+  const { data: upload } = await supabase
+    .from(config.uploadsTable)
+    .select("*")
+    .eq("id", req.params.id)
+    .maybeSingle();
+
   if (!upload) {
     return res.status(404).json({ error: "Upload not found" });
   }
@@ -99,15 +160,16 @@ router.patch("/uploads/:id/reject", authRequired, adminRequired, async (req, res
     return res.status(400).json({ error: "Upload already reviewed" });
   }
 
-  const sourcePath = path.resolve(storageRoot, upload.filePath);
-  if (fs.existsSync(sourcePath)) {
-    fs.unlinkSync(sourcePath);
-  }
+  await supabase.storage.from(config.uploadsBucket).remove([upload.storage_path]);
 
-  upload.status = "rejected";
-  upload.reviewedBy = req.user._id;
-  upload.reviewedAt = new Date();
-  await upload.save();
+  await supabase
+    .from(config.uploadsTable)
+    .update({
+      status: "rejected",
+      reviewed_by: req.user.id,
+      reviewed_at: new Date().toISOString()
+    })
+    .eq("id", upload.id);
 
   return res.json({ status: "rejected" });
 });

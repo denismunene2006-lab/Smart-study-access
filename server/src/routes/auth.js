@@ -1,13 +1,7 @@
 import express from "express";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "../config.js";
-import {
-  Referral,
-  Reward,
-  User
-} from "../models.js";
+import { getSupabaseAdmin, getSupabaseAuthClient } from "../supabase.js";
 import { computeAccess } from "../utils/access.js";
 import { authRequired } from "../middleware/auth.js";
 
@@ -18,16 +12,16 @@ function mapUser(user) {
 
   return {
     id: user.id,
-    name: user.fullName,
+    name: user.full_name,
     email: user.email,
-    studentId: user.studentId,
+    studentId: user.student_id,
     role: user.role,
-    trialEndsAt: user.trialEndsAt,
-    subscriptionEndsAt: user.subscriptionEndsAt,
-    bonusDays: user.bonusDays,
-    referralProgress: user.referralProgress,
-    referralCode: user.referralCode,
-    createdAt: user.createdAt
+    trialEndsAt: user.trial_ends_at,
+    subscriptionEndsAt: user.subscription_ends_at,
+    bonusDays: user.bonus_days,
+    referralProgress: user.referral_progress,
+    referralCode: user.referral_code,
+    createdAt: user.created_at
   };
 }
 
@@ -49,20 +43,74 @@ function addDays(date, days) {
   return result;
 }
 
-function signToken(user) {
-  return jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, { expiresIn: "30d" });
-}
-
-async function generateReferralCode() {
+async function generateReferralCode(supabase) {
   for (let i = 0; i < 6; i += 1) {
     const code = uuidv4().split("-")[0].toUpperCase();
-    const existing = await User.exists({ referralCode: code });
-    if (!existing) {
+    const { data } = await supabase
+      .from(config.profilesTable)
+      .select("id")
+      .eq("referral_code", code)
+      .maybeSingle();
+    if (!data) {
       return code;
     }
   }
 
   return uuidv4().split("-")[0].toUpperCase();
+}
+
+async function applyReferralReward(supabase, normalizedReferral, newUserId) {
+  if (!normalizedReferral) {
+    return;
+  }
+
+  const { data: referrer } = await supabase
+    .from(config.profilesTable)
+    .select("id, referral_progress, referral_cycles, bonus_days")
+    .eq("referral_code", normalizedReferral)
+    .maybeSingle();
+
+  if (!referrer?.id) {
+    return;
+  }
+
+  await supabase
+    .from(config.referralsTable)
+    .insert({
+      referrer_id: referrer.id,
+      referred_user_id: newUserId
+    });
+
+  const progress = Number(referrer.referral_progress || 0) + 1;
+  const rewardUnlocked = progress >= 3;
+  const nextProgress = rewardUnlocked ? 0 : progress;
+  const nextCycles = rewardUnlocked
+    ? Number(referrer.referral_cycles || 0) + 1
+    : Number(referrer.referral_cycles || 0);
+  const nextBonusDays = rewardUnlocked
+    ? Number(referrer.bonus_days || 0) + 7
+    : Number(referrer.bonus_days || 0);
+
+  await supabase
+    .from(config.profilesTable)
+    .update({
+      referral_progress: nextProgress,
+      referral_cycles: nextCycles,
+      bonus_days: nextBonusDays,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", referrer.id);
+
+  if (rewardUnlocked) {
+    await supabase
+      .from(config.rewardsTable)
+      .insert({
+        user_id: referrer.id,
+        source_type: "referral",
+        source_id: newUserId,
+        days: 7
+      });
+  }
 }
 
 router.post("/signup", async (req, res, next) => {
@@ -73,62 +121,82 @@ router.post("/signup", async (req, res, next) => {
   }
 
   try {
+    const supabase = getSupabaseAdmin();
+    const supabaseAuth = getSupabaseAuthClient();
     const normalizedEmail = normalizeEmail(email);
     const normalizedStudentId = normalizeStudentId(studentId);
-    const existing = await User.exists({
-      $or: [{ email: normalizedEmail }, { studentId: normalizedStudentId }]
-    });
-    if (existing) {
+
+    const { data: emailMatch } = await supabase
+      .from(config.profilesTable)
+      .select("id")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    const { data: studentMatch } = await supabase
+      .from(config.profilesTable)
+      .select("id")
+      .eq("student_id", normalizedStudentId)
+      .maybeSingle();
+
+    if (emailMatch || studentMatch) {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      fullName: String(name).trim(),
+    const signUpResult = await supabaseAuth.auth.signUp({
       email: normalizedEmail,
-      studentId: normalizedStudentId,
-      passwordHash,
-      trialEndsAt: addDays(new Date(), 7),
-      referralCode: await generateReferralCode()
+      password,
+      options: {
+        data: {
+          full_name: String(name).trim(),
+          student_id: normalizedStudentId
+        }
+      }
     });
+
+    if (signUpResult.error || !signUpResult.data.user?.id) {
+      return res.status(400).json({ error: signUpResult.error?.message || "Signup failed" });
+    }
+
+    const userId = signUpResult.data.user.id;
+    const referral = await generateReferralCode(supabase);
+    const trialEndsAt = addDays(new Date(), 7).toISOString();
+
+    const { data: profile, error: profileError } = await supabase
+      .from(config.profilesTable)
+      .upsert({
+        id: userId,
+        full_name: String(name).trim(),
+        email: normalizedEmail,
+        student_id: normalizedStudentId,
+        role: "student",
+        referral_code: referral,
+        referral_progress: 0,
+        referral_cycles: 0,
+        bonus_days: 0,
+        trial_ends_at: trialEndsAt,
+        subscription_ends_at: null
+      }, { onConflict: "id" })
+      .select("*")
+      .single();
+
+    if (profileError) {
+      return res.status(400).json({ error: profileError.message || "Unable to create profile" });
+    }
 
     const normalizedReferral = normalizeReferralCode(referralCode);
-    if (normalizedReferral) {
-      const referrer = await User.findOne({ referralCode: normalizedReferral });
-      if (referrer) {
-        await Referral.create({
-          referrerId: referrer._id,
-          referredUserId: user._id
-        });
+    await applyReferralReward(supabase, normalizedReferral, userId);
 
-        const progress = (referrer.referralProgress || 0) + 1;
-        let bonusAdd = 0;
-        referrer.referralProgress = progress;
+    const signInResult = await supabaseAuth.auth.signInWithPassword({
+      email: normalizedEmail,
+      password
+    });
 
-        if (progress >= 3) {
-          bonusAdd = 7;
-          referrer.referralProgress = 0;
-          referrer.referralCycles = (referrer.referralCycles || 0) + 1;
-          referrer.bonusDays = (referrer.bonusDays || 0) + bonusAdd;
-
-          await Reward.create({
-            userId: referrer._id,
-            sourceType: "referral",
-            sourceId: user.id,
-            days: bonusAdd
-          });
-        }
-
-        await referrer.save();
-      }
+    if (signInResult.error || !signInResult.data.session?.access_token) {
+      return res.status(400).json({ error: signInResult.error?.message || "Signup succeeded but login failed" });
     }
 
-    return res.json({ token: signToken(user), user: mapUser(user) });
+    return res.json({ token: signInResult.data.session.access_token, user: mapUser(profile) });
   } catch (error) {
-    if (error?.code === 11000) {
-      return res.status(400).json({ error: "User already exists" });
-    }
-
     return next(error);
   }
 });
@@ -139,23 +207,44 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Missing credentials" });
   }
 
+  const supabase = getSupabaseAdmin();
+  const supabaseAuth = getSupabaseAuthClient();
   const loginId = String(id).trim();
-  const user = await User.findOne({
-    $or: [
-      { email: loginId.toLowerCase() },
-      { studentId: loginId.toUpperCase() }
-    ]
+  let loginEmail = loginId.toLowerCase();
+
+  if (!loginId.includes("@")) {
+    const { data: profile } = await supabase
+      .from(config.profilesTable)
+      .select("email")
+      .eq("student_id", loginId.toUpperCase())
+      .maybeSingle();
+
+    loginEmail = profile?.email || loginEmail;
+  }
+
+  const signInResult = await supabaseAuth.auth.signInWithPassword({
+    email: loginEmail,
+    password
   });
-  if (!user) {
+
+  if (signInResult.error || !signInResult.data.user?.id || !signInResult.data.session?.access_token) {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) {
-    return res.status(401).json({ error: "Invalid credentials" });
+  const { data: profile } = await supabase
+    .from(config.profilesTable)
+    .select("*")
+    .eq("id", signInResult.data.user.id)
+    .maybeSingle();
+
+  if (!profile) {
+    return res.status(404).json({ error: "Profile is not set up for this account" });
   }
 
-  return res.json({ token: signToken(user), user: mapUser(user) });
+  return res.json({
+    token: signInResult.data.session.access_token,
+    user: mapUser(profile)
+  });
 });
 
 router.get("/me", authRequired, async (req, res) => {

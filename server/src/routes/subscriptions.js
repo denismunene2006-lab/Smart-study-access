@@ -1,10 +1,7 @@
 import express from "express";
+import { config } from "../config.js";
 import { authRequired } from "../middleware/auth.js";
-import {
-  Subscription,
-  Transaction,
-  User
-} from "../models.js";
+import { getSupabaseAdmin } from "../supabase.js";
 import { initiateStkPush } from "../services/mpesa.js";
 
 const router = express.Router();
@@ -44,15 +41,18 @@ router.post("/mpesa", authRequired, async (req, res) => {
     amount: 30
   });
 
-  await Transaction.create({
-    userId: req.user._id,
-    amount: 30,
-    method: "M-Pesa STK Push",
-    status: "Pending",
-    checkoutRequestId: response.CheckoutRequestID || null,
-    merchantRequestId: response.MerchantRequestID || null,
-    phoneNumber
-  });
+  const supabase = getSupabaseAdmin();
+  await supabase
+    .from(config.transactionsTable)
+    .insert({
+      user_id: req.user.id,
+      amount: 30,
+      method: "M-Pesa STK Push",
+      status: "Pending",
+      checkout_request_id: response.CheckoutRequestID || null,
+      merchant_request_id: response.MerchantRequestID || null,
+      phone_number: phoneNumber
+    });
 
   return res.json({
     message: response.CustomerMessage || "STK push sent",
@@ -66,44 +66,66 @@ router.post("/mpesa/callback", async (req, res) => {
     return res.json({ received: true });
   }
 
-  const matches = [];
+  const supabase = getSupabaseAdmin();
+  let transactionQuery = supabase
+    .from(config.transactionsTable)
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
   if (parsed.checkoutRequestId) {
-    matches.push({ checkoutRequestId: parsed.checkoutRequestId });
-  }
-  if (parsed.merchantRequestId) {
-    matches.push({ merchantRequestId: parsed.merchantRequestId });
+    transactionQuery = transactionQuery.eq("checkout_request_id", parsed.checkoutRequestId);
+  } else {
+    transactionQuery = transactionQuery.eq("merchant_request_id", parsed.merchantRequestId);
   }
 
-  const transaction = await Transaction.findOne({ $or: matches }).sort({ createdAt: -1 });
+  const { data: matchedTransactions } = await transactionQuery;
+  const transaction = matchedTransactions?.[0] || null;
 
   if (!transaction) {
     return res.json({ received: true });
   }
 
   const success = Number(parsed.resultCode) === 0;
-  transaction.status = success ? "Success" : "Failed";
-  transaction.mpesaReceiptNumber = parsed.mpesaReceiptNumber || null;
-  transaction.rawCallback = req.body || null;
-  transaction.phoneNumber = parsed.phoneNumber || transaction.phoneNumber;
-  await transaction.save();
+  await supabase
+    .from(config.transactionsTable)
+    .update({
+      status: success ? "Success" : "Failed",
+      mpesa_receipt_number: parsed.mpesaReceiptNumber || null,
+      raw_callback: req.body || null,
+      phone_number: parsed.phoneNumber || transaction.phone_number
+    })
+    .eq("id", transaction.id);
 
   if (success) {
-    const user = await User.findById(transaction.userId);
-    if (user) {
+    const { data: profile } = await supabase
+      .from(config.profilesTable)
+      .select("id, subscription_ends_at")
+      .eq("id", transaction.user_id)
+      .maybeSingle();
+
+    if (profile) {
       const now = new Date();
-      const currentEnd = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null;
+      const currentEnd = profile.subscription_ends_at ? new Date(profile.subscription_ends_at) : null;
       const base = currentEnd && currentEnd > now ? currentEnd : now;
       const newEnd = addDays(base, 30);
 
-      user.subscriptionEndsAt = newEnd;
-      await user.save();
+      await supabase
+        .from(config.profilesTable)
+        .update({
+          subscription_ends_at: newEnd.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", profile.id);
 
-      await Subscription.create({
-        userId: user._id,
-        startAt: base,
-        endAt: newEnd,
-        status: "active"
-      });
+      await supabase
+        .from(config.subscriptionsTable)
+        .insert({
+          user_id: profile.id,
+          start_at: base.toISOString(),
+          end_at: newEnd.toISOString(),
+          status: "active"
+        });
     }
   }
 

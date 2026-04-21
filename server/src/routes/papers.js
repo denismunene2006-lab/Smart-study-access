@@ -1,40 +1,18 @@
 import express from "express";
-import fs from "fs";
-import path from "path";
-import { Paper } from "../models.js";
+import { config } from "../config.js";
 import { authRequired } from "../middleware/auth.js";
-import { storageRoot } from "../paths.js";
+import { getSupabaseAdmin } from "../supabase.js";
 import { computeAccess } from "../utils/access.js";
 
 const router = express.Router();
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function buildFilters({ courseCode, year, examType, search }) {
-  const filters = {};
-
-  if (courseCode) {
-    filters.courseCode = new RegExp(`^${escapeRegExp(String(courseCode).trim())}$`, "i");
-  }
-
-  if (year) {
-    filters.year = Number(year);
-  }
-
-  if (examType) {
-    filters.examType = String(examType).trim();
-  }
-
-  if (search) {
-    const pattern = new RegExp(escapeRegExp(String(search).trim()), "i");
-    filters.$or = [
-      { courseCode: pattern },
-      { courseName: pattern },
-      { title: pattern }
-    ];
-  }
+  const filters = {
+    courseCode: courseCode ? String(courseCode).trim().toUpperCase() : "",
+    year: year ? Number(year) : null,
+    examType: examType ? String(examType).trim() : "",
+    search: search ? String(search).trim() : ""
+  };
 
   return filters;
 }
@@ -42,11 +20,11 @@ function buildFilters({ courseCode, year, examType, search }) {
 function mapPaper(paper) {
   return {
     id: paper.id,
-    courseCode: paper.courseCode,
-    unitName: paper.title || paper.courseName,
-    courseName: paper.courseName,
+    courseCode: paper.course_code,
+    unitName: paper.title || paper.course_name,
+    courseName: paper.course_name,
     year: paper.year,
-    examType: paper.examType,
+    examType: paper.exam_type,
     pages: null,
     views: paper.views || 0
   };
@@ -54,18 +32,58 @@ function mapPaper(paper) {
 
 router.get("/", async (req, res) => {
   const filters = buildFilters(req.query || {});
-  const papers = await Paper.find(filters).sort({ year: -1, createdAt: -1 }).lean();
-  return res.json({ papers: papers.map((paper) => mapPaper({ ...paper, id: paper._id.toString() })) });
+  const supabase = getSupabaseAdmin();
+
+  let query = supabase
+    .from(config.papersTable)
+    .select("*")
+    .order("year", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (filters.courseCode) {
+    query = query.eq("course_code", filters.courseCode);
+  }
+
+  if (filters.year) {
+    query = query.eq("year", filters.year);
+  }
+
+  if (filters.examType) {
+    query = query.eq("exam_type", filters.examType);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    return res.status(500).json({ error: error.message || "Unable to fetch papers" });
+  }
+
+  const search = filters.search.toLowerCase();
+  const filtered = search
+    ? (data || []).filter((paper) => {
+      const values = [paper.course_code, paper.course_name, paper.title]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return values.includes(search);
+    })
+    : data || [];
+
+  return res.json({ papers: filtered.map(mapPaper) });
 });
 
 router.get("/:id", async (req, res) => {
-  const paper = await Paper.findById(req.params.id).lean();
+  const supabase = getSupabaseAdmin();
+  const { data: paper } = await supabase
+    .from(config.papersTable)
+    .select("*")
+    .eq("id", req.params.id)
+    .maybeSingle();
+
   if (!paper) {
     return res.status(404).json({ error: "Paper not found" });
   }
 
-  const mapped = mapPaper({ ...paper, id: paper._id.toString() });
-  return res.json({ paper: mapped });
+  return res.json({ paper: mapPaper(paper) });
 });
 
 router.get("/:id/stream", authRequired, async (req, res) => {
@@ -74,27 +92,41 @@ router.get("/:id/stream", authRequired, async (req, res) => {
     return res.status(403).json({ error: "Subscription required" });
   }
 
-  const paper = await Paper.findById(req.params.id);
+  const supabase = getSupabaseAdmin();
+  const { data: paper } = await supabase
+    .from(config.papersTable)
+    .select("id, course_code, year, storage_path, views")
+    .eq("id", req.params.id)
+    .maybeSingle();
+
   if (!paper) {
     return res.status(404).json({ error: "Paper not found" });
   }
 
-  const absolutePath = path.resolve(storageRoot, paper.filePath);
-  if (!absolutePath.startsWith(storageRoot)) {
-    return res.status(400).json({ error: "Invalid file path" });
-  }
+  const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+    .from(config.papersBucket)
+    .createSignedUrl(paper.storage_path, 60);
 
-  if (!fs.existsSync(absolutePath)) {
+  if (signedUrlError || !signedUrlData?.signedUrl) {
     return res.status(404).json({ error: "File missing" });
   }
 
-  await Paper.findByIdAndUpdate(paper._id, { $inc: { views: 1 } });
+  const fileResponse = await fetch(signedUrlData.signedUrl);
+  if (!fileResponse.ok) {
+    return res.status(404).json({ error: "File missing" });
+  }
+
+  await supabase
+    .from(config.papersTable)
+    .update({ views: Number(paper.views || 0) + 1 })
+    .eq("id", paper.id);
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="${paper.courseCode}-${paper.year}.pdf"`);
+  res.setHeader("Content-Disposition", `inline; filename="${paper.course_code}-${paper.year}.pdf"`);
   res.setHeader("Cache-Control", "private, no-store");
-  const stream = fs.createReadStream(absolutePath);
-  return stream.pipe(res);
+
+  const buffer = Buffer.from(await fileResponse.arrayBuffer());
+  return res.send(buffer);
 });
 
 export default router;

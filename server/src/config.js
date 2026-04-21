@@ -37,29 +37,30 @@ function parseList(value, fallback = []) {
   return parsed.length > 0 ? parsed : fallback;
 }
 
-const mongodbUri = readString(process.env.MONGODB_URI);
 const corsOrigins = parseList(process.env.CORS_ORIGIN, LOCAL_CORS_DEFAULTS);
-const renderExternalHostname = readString(process.env.RENDER_EXTERNAL_HOSTNAME);
-const inferredMpesaCallbackUrl = renderExternalHostname
-  ? `https://${renderExternalHostname}/api/subscriptions/mpesa/callback`
+const apiBaseUrl = readString(process.env.API_BASE_URL);
+const inferredMpesaCallbackUrl = apiBaseUrl
+  ? `${apiBaseUrl.replace(/\/$/, "")}/api/subscriptions/mpesa/callback`
   : "";
 
 export const config = {
   port: parseInteger(process.env.PORT, 4000),
-  mongodbUri,
-  databaseConfigured: Boolean(mongodbUri),
-  databaseConfigSource: mongodbUri ? "MONGODB_URI" : null,
-  mongodbDbName: readString(process.env.MONGODB_DB_NAME),
-  mongodbServerSelectionTimeoutMs: parseInteger(
-    process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
-    5000
-  ),
-  jwtSecret: readString(process.env.JWT_SECRET) || "change_me",
+  apiBaseUrl,
+  supabaseUrl: readString(process.env.SUPABASE_URL),
+  supabaseAnonKey: readString(process.env.SUPABASE_ANON_KEY),
+  supabaseServiceRoleKey: readString(process.env.SUPABASE_SERVICE_ROLE_KEY),
+  profilesTable: readString(process.env.SUPABASE_PROFILES_TABLE) || "profiles",
+  papersTable: readString(process.env.SUPABASE_PAPERS_TABLE) || "papers",
+  uploadsTable: readString(process.env.SUPABASE_UPLOADS_TABLE) || "uploads",
+  transactionsTable: readString(process.env.SUPABASE_TRANSACTIONS_TABLE) || "transactions",
+  subscriptionsTable: readString(process.env.SUPABASE_SUBSCRIPTIONS_TABLE) || "subscriptions",
+  rewardsTable: readString(process.env.SUPABASE_REWARDS_TABLE) || "rewards",
+  referralsTable: readString(process.env.SUPABASE_REFERRALS_TABLE) || "referrals",
+  papersBucket: readString(process.env.SUPABASE_PAPERS_BUCKET) || "papers",
+  uploadsBucket: readString(process.env.SUPABASE_UPLOADS_BUCKET) || "uploads",
   corsOrigins,
   corsAllowAnyOrigin: corsOrigins.includes("*"),
   strictStartup: parseBoolean(process.env.STRICT_STARTUP, false),
-  storageRoot: readString(process.env.STORAGE_ROOT) || "storage",
-  renderExternalHostname,
   mpesaEnv: readString(process.env.MPESA_ENV) || "sandbox",
   mpesaConsumerKey: readString(process.env.MPESA_CONSUMER_KEY),
   mpesaConsumerSecret: readString(process.env.MPESA_CONSUMER_SECRET),
@@ -72,20 +73,18 @@ export const config = {
     readString(process.env.MPESA_TRANSACTION_DESC) || "Past Papers Subscription"
 };
 
-export function isDefaultJwtSecret(value = config.jwtSecret) {
-  return value === "change_me" || value === "local_dev_secret_change_me";
-}
-
 export function getConfigDiagnostics() {
   const issues = [];
   const warnings = [];
 
-  if (!config.databaseConfigured) {
-    issues.push("MongoDB is not configured. Set MONGODB_URI before deploying.");
+  if (!config.supabaseUrl || !config.supabaseAnonKey || !config.supabaseServiceRoleKey) {
+    issues.push(
+      "Supabase is not fully configured. Set SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY."
+    );
   }
 
-  if (isDefaultJwtSecret()) {
-    warnings.push("JWT_SECRET is still using a placeholder value.");
+  if (!config.apiBaseUrl) {
+    warnings.push("API_BASE_URL is not set. M-Pesa callback inference may fail.");
   }
 
   if (config.corsAllowAnyOrigin) {

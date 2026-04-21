@@ -5,8 +5,8 @@ const router = express.Router();
 
 router.get("/code", authRequired, async (req, res) => {
   return res.json({
-    code: req.user.referralCode,
-    progress: req.user.referralProgress
+    code: req.user.referral_code,
+    progress: req.user.referral_progress
   });
 });
 

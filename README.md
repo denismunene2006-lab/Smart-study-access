@@ -8,9 +8,8 @@ The current frontend preview is available at:
 
 ## Deployment target
 - Frontend: Vercel static deployment from the repo root
-- Backend: Render web service from `server/`
-- Database: MongoDB Atlas via `MONGODB_URI`
-- Payments: M-Pesa Daraja STK Push
+- Backend + Auth + Storage: Supabase
+- Payments: M-Pesa Daraja STK Push via API in `server/`
 
 ## Pages
 - `index.html` Home and product overview
@@ -32,16 +31,17 @@ The current frontend preview is available at:
 1. Import this repository into Vercel.
 2. Set the build command to `npm run build` if Vercel does not detect it automatically.
 3. Set the output directory to `dist` if needed.
-4. Add the `FRONTEND_API_BASE` environment variable with your Render API base URL.
-   Example: `https://your-render-service.onrender.com/api`
+4. Add the `FRONTEND_API_BASE` environment variable with your API base URL.
+  Example: `https://your-api-service.example.com/api`
 
-The build script writes that value into `dist/assets/js/runtime-config.js`, so the deployed frontend talks to the hosted backend without any demo mode.
+The build script writes that value into `dist/assets/js/runtime-config.js`, so the deployed frontend talks to your hosted API.
 
-## Backend on Render
-1. Create the Render web service from `render.yaml` or point the service root to `server`.
-2. Set `MONGODB_URI`, `JWT_SECRET`, `CORS_ORIGIN`, and the `MPESA_*` secrets.
-3. Attach the persistent disk defined in `render.yaml`.
-4. Use `/api/health/live` as the Render health check path.
+## Backend + Supabase
+1. In Supabase, run `server/supabase-schema.sql` in the SQL editor.
+2. Create two Storage buckets: `papers` and `uploads`.
+3. Configure environment variables in `server/.env` from `server/.env.example`.
+4. Deploy the `server/` API to your preferred Node host (Render, Railway, Fly.io, etc).
+5. Use `/api/health/live` as your liveness check path.
 
 ## Local development
 - Frontend: serve the repo root with a static server

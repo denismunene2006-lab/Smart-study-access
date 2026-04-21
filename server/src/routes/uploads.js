@@ -2,24 +2,14 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import { config } from "../config.js";
 import { authRequired } from "../middleware/auth.js";
-import { Upload } from "../models.js";
-import { uploadsRoot } from "../paths.js";
+import { getSupabaseAdmin } from "../supabase.js";
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsRoot);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".pdf";
-    cb(null, `${uuidv4()}${ext}`);
-  }
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype !== "application/pdf") {
@@ -34,11 +24,11 @@ function mapUpload(uploadDoc) {
   return {
     id: uploadDoc.id,
     title: uploadDoc.title,
-    courseCode: uploadDoc.courseCode,
-    examType: uploadDoc.examType,
+    courseCode: uploadDoc.course_code,
+    examType: uploadDoc.exam_type,
     year: uploadDoc.year,
     status: uploadDoc.status,
-    createdAt: uploadDoc.createdAt
+    createdAt: uploadDoc.created_at
   };
 }
 
@@ -57,24 +47,54 @@ router.post("/", authRequired, upload.single("file"), async (req, res) => {
     return res.status(400).json({ error: "Missing upload details" });
   }
 
-  const uploadDoc = await Upload.create({
-    uploaderId: req.user._id,
-    title: String(title).trim(),
-    faculty: String(faculty || "").trim(),
-    department: String(department || "").trim(),
-    courseCode: String(courseCode).trim().toUpperCase(),
-    courseName: String(courseName || "").trim(),
-    year: Number(year),
-    examType: String(examType).trim(),
-    filePath: `uploads/${req.file.filename}`
-  });
+  const supabase = getSupabaseAdmin();
+  const ext = path.extname(req.file.originalname) || ".pdf";
+  const filePath = `pending/${uuidv4()}${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(config.uploadsBucket)
+    .upload(filePath, req.file.buffer, {
+      contentType: "application/pdf",
+      upsert: false
+    });
+
+  if (uploadError) {
+    return res.status(500).json({ error: uploadError.message || "Unable to store file" });
+  }
+
+  const { data: uploadDoc, error: insertError } = await supabase
+    .from(config.uploadsTable)
+    .insert({
+      uploader_id: req.user.id,
+      title: String(title).trim(),
+      faculty: String(faculty || "").trim(),
+      department: String(department || "").trim(),
+      course_code: String(courseCode).trim().toUpperCase(),
+      course_name: String(courseName || "").trim(),
+      year: Number(year),
+      exam_type: String(examType).trim(),
+      storage_path: filePath,
+      status: "pending"
+    })
+    .select("*")
+    .single();
+
+  if (insertError) {
+    return res.status(500).json({ error: insertError.message || "Unable to save upload" });
+  }
 
   return res.json({ upload: mapUpload(uploadDoc) });
 });
 
 router.get("/my", authRequired, async (req, res) => {
-  const uploads = await Upload.find({ uploaderId: req.user._id }).sort({ createdAt: -1 });
-  return res.json({ uploads: uploads.map(mapUpload) });
+  const supabase = getSupabaseAdmin();
+  const { data: uploads } = await supabase
+    .from(config.uploadsTable)
+    .select("*")
+    .eq("uploader_id", req.user.id)
+    .order("created_at", { ascending: false });
+
+  return res.json({ uploads: (uploads || []).map(mapUpload) });
 });
 
 export default router;

@@ -21,7 +21,7 @@ export async function getHealthReport() {
   const configStatus = getConfigDiagnostics();
   const [databaseStatus, storageStatus] = await Promise.all([
     checkDatabaseConnection(),
-    Promise.resolve(getStorageStatus())
+    getStorageStatus()
   ]);
   const mpesaStatus = getMpesaConfigStatus();
 

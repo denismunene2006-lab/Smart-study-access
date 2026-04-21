@@ -1,26 +1,35 @@
-import fs from "fs";
-import { papersRoot, storageRoot, uploadsRoot } from "../paths.js";
-
-const requiredDirectories = [storageRoot, uploadsRoot, papersRoot];
+import { config } from "../config.js";
+import { getSupabaseAdmin } from "../supabase.js";
 
 export function ensureStorageDirectories() {
-  requiredDirectories.forEach((directory) => {
-    fs.mkdirSync(directory, { recursive: true });
-  });
-
-  return [...requiredDirectories];
+  return {
+    papersBucket: config.papersBucket,
+    uploadsBucket: config.uploadsBucket
+  };
 }
 
-export function getStorageStatus() {
+export async function getStorageStatus() {
   try {
-    ensureStorageDirectories();
+    const supabase = getSupabaseAdmin();
+    const [papersList, uploadsList] = await Promise.all([
+      supabase.storage.from(config.papersBucket).list("", { limit: 1 }),
+      supabase.storage.from(config.uploadsBucket).list("", { limit: 1 })
+    ]);
+
+    if (papersList.error || uploadsList.error) {
+      return {
+        status: "error",
+        ready: false,
+        error: papersList.error?.message || uploadsList.error?.message || "Storage buckets unavailable"
+      };
+    }
+
     return {
       status: "ok",
       ready: true,
       paths: {
-        root: storageRoot,
-        uploads: uploadsRoot,
-        papers: papersRoot
+        uploadsBucket: config.uploadsBucket,
+        papersBucket: config.papersBucket
       }
     };
   } catch (error) {

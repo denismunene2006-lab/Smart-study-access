@@ -10,7 +10,6 @@ import transactionsRoutes from "./routes/transactions.js";
 import referralsRoutes from "./routes/referrals.js";
 import adminRoutes from "./routes/admin.js";
 import { getHealthReport } from "./services/health.js";
-import { ensureStorageDirectories } from "./services/storage.js";
 
 const app = express();
 
@@ -72,8 +71,6 @@ app.use((err, req, res, next) => {
 });
 
 async function startServer() {
-  ensureStorageDirectories();
-
   const report = await getHealthReport();
   report.config.warnings.forEach((warning) => {
     console.warn(`[startup] ${warning}`);

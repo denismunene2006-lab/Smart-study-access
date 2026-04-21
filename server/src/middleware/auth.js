@@ -1,6 +1,5 @@
-import jwt from "jsonwebtoken";
 import { config } from "../config.js";
-import { User } from "../models.js";
+import { getSupabaseAdmin } from "../supabase.js";
 
 export async function authRequired(req, res, next) {
   const header = req.headers.authorization || "";
@@ -10,13 +9,24 @@ export async function authRequired(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, config.jwtSecret);
-    const user = await User.findById(decoded.sub);
-    if (!user) {
+    const supabase = getSupabaseAdmin();
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authData?.user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    req.user = user;
+    const { data: profile, error: profileError } = await supabase
+      .from(config.profilesTable)
+      .select("*")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    req.user = profile;
+    req.authUser = authData.user;
     return next();
   } catch (error) {
     return res.status(401).json({ error: "Unauthorized" });

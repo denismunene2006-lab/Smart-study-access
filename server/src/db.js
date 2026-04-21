@@ -1,98 +1,59 @@
-import mongoose from "mongoose";
 import { config } from "./config.js";
+import { getSupabaseAdmin } from "./supabase.js";
 
-mongoose.set("strictQuery", true);
-mongoose.set("bufferCommands", false);
-
-let connectPromise = null;
-
-function formatDatabaseError(error) {
-  if (error?.cause?.message) {
-    return error.cause.message;
-  }
-
-  if (Array.isArray(error?.errors) && error.errors.length > 0) {
-    return error.errors
-      .map((item) => item?.message || item?.code || String(item))
-      .filter(Boolean)
-      .join("; ");
-  }
-
-  return error?.message || error?.code || "Unknown MongoDB connection error.";
-}
-
-function buildConnectionOptions() {
-  const options = {
-    serverSelectionTimeoutMS: config.mongodbServerSelectionTimeoutMs,
-    appName: "embu-past-papers-api"
-  };
-
-  if (config.mongodbDbName) {
-    options.dbName = config.mongodbDbName;
-  }
-
-  return options;
-}
+let lastCheckAt = null;
 
 export async function connectToDatabase() {
-  if (!config.databaseConfigured) {
-    const error = new Error("MongoDB is not configured.");
+  if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
+    const error = new Error("Supabase is not configured.");
     error.statusCode = 503;
     throw error;
   }
 
-  if (mongoose.connection.readyState === 1) {
-    return mongoose.connection;
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from(config.profilesTable)
+    .select("id", { count: "exact", head: true });
+
+  if (error) {
+    const err = new Error(error.message || "Supabase connection failed.");
+    err.statusCode = 503;
+    throw err;
   }
 
-  if (connectPromise) {
-    return connectPromise;
-  }
-
-  connectPromise = mongoose.connect(config.mongodbUri, buildConnectionOptions())
-    .then(() => mongoose.connection)
-    .catch((error) => {
-      connectPromise = null;
-      throw error;
-    });
-
-  const connection = await connectPromise;
-  connectPromise = null;
-  return connection;
+  lastCheckAt = new Date().toISOString();
+  return { ready: true, checkedAt: lastCheckAt };
 }
 
 export async function checkDatabaseConnection() {
-  if (!config.databaseConfigured) {
+  if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
     return {
       status: "not_configured",
       ready: false,
       source: null,
-      error: "Set MONGODB_URI to your MongoDB Atlas or MongoDB server connection string."
+      error: "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
     };
   }
 
   try {
     await connectToDatabase();
-    await mongoose.connection.db.admin().ping();
     return {
       status: "ok",
       ready: true,
-      source: config.databaseConfigSource,
-      databaseName: mongoose.connection.name
+      source: "supabase",
+      projectUrl: config.supabaseUrl,
+      checkedAt: lastCheckAt
     };
   } catch (error) {
     return {
       status: "error",
       ready: false,
-      source: config.databaseConfigSource,
-      error: formatDatabaseError(error)
+      source: "supabase",
+      error: error?.message || "Supabase health check failed."
     };
   }
 }
 
 export async function closeDatabaseConnection() {
-  connectPromise = null;
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
-  }
+  return Promise.resolve();
 }

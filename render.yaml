@@ -11,16 +11,20 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: API_BASE_URL
+        sync: false
       - key: CORS_ORIGIN
         sync: false
-      - key: MONGODB_URI
+      - key: SUPABASE_URL
         sync: false
-      - key: MONGODB_DB_NAME
-        value: embu_papers
-      - key: JWT_SECRET
+      - key: SUPABASE_ANON_KEY
         sync: false
-      - key: STORAGE_ROOT
-        value: /opt/render/project/src/storage
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_PAPERS_BUCKET
+        value: papers
+      - key: SUPABASE_UPLOADS_BUCKET
+        value: uploads
       - key: STRICT_STARTUP
         value: "false"
       - key: MPESA_ENV
@@ -39,7 +43,3 @@ services:
         value: UEPPASTPAPERS
       - key: MPESA_TRANSACTION_DESC
         value: Past Papers Subscription
-    disk:
-      name: papers-storage
-      mountPath: /opt/render/project/src/storage
-      sizeGB: 1
