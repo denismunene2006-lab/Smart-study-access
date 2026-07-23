@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<!doctype html>
+﻿﻿﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -47,70 +47,94 @@
   <main>
     <section id="profile">
       <div class="section-title">
-        <h2>Profile</h2>
+        <h2>My Dashboard</h2>
       </div>
       <div class="split">
-        <div class="card">
-          <h3>Subscription Status</h3>
-          <div id="profileStatus" class="status">Not logged in</div>
-          <p id="profileDetails">Login to see your trial and subscription dates.</p>
+        <div style="display: flex; flex-direction: column; gap: 1.75rem;">
+          <div class="card" style="display: flex; flex-direction: column; gap: 1rem;">
+            <h3>Subscription Status</h3>
+            <div id="profileStatus" class="status">Not logged in</div>
+            <p id="profileDetails" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-muted);">Login to see your trial and subscription dates.</p>
+          </div>
+          
+          <div class="card">
+            <h3>Access Summary</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">Overview of trial, subscription, and rewarded days.</p>
+            <div class="profile-access-grid">
+              <div class="profile-metric-box">
+                <span class="profile-metric-title">Trial Ends</span>
+                <span class="profile-metric-value" id="trialEnd">-</span>
+              </div>
+              <div class="profile-metric-box">
+                <span class="profile-metric-title">Subscription Ends</span>
+                <span class="profile-metric-value" id="subEnd">-</span>
+              </div>
+              <div class="profile-metric-box">
+                <span class="profile-metric-title">Bonus Days</span>
+                <span class="profile-metric-value" id="bonusDays">0</span>
+              </div>
+              <div class="profile-metric-box">
+                <span class="profile-metric-title">Total Access Until</span>
+                <span class="profile-metric-value" id="accessUntil">-</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card">
-          <h3>Access Summary</h3>
-          <div>Trial ends: <span id="trialEnd">-</span></div>
-          <div>Subscription ends: <span id="subEnd">-</span></div>
-          <div>Bonus days: <span id="bonusDays">0</span></div>
-          <div>Total access until: <span id="accessUntil">-</span></div>
-        </div>
-        <div class="card">
-          <h3>My Uploads</h3>
-          <div id="myUploads">No uploads yet.</div>
+
+        <div class="card" style="display: flex; flex-direction: column; gap: 1rem; min-height: 380px;">
+          <h3>My Uploaded Papers</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Track approval history of past papers you contributed.</p>
+          <div id="myUploads" style="flex: 1;">No uploads yet.</div>
         </div>
       </div>
 
-      <div class="card" style="margin-top: var(--space-xl);">
+      <div class="card" style="margin-top: 3rem;">
         <div class="section-title">
           <h2>Upload a Past Paper</h2>
         </div>
         <div class="card">
-          <p style="margin-bottom: var(--space-md);">Contribute and earn <strong>+2 bonus days</strong> for every approved upload.</p>
-          <div class="grid">
-            <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
-              <div>
-                <label for="uploadTitle">Unit Title</label>
-                <input id="uploadTitle" type="text" placeholder="e.g. Data Structures" required />
+          <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+            Contribute to the hub and earn <strong>+2 bonus days</strong> of unlimited subscription for every approved PDF.
+          </p>
+          <form id="uploadForm" onsubmit="return false;">
+            <div class="grid" style="margin-bottom: 1.5rem;">
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="form-group">
+                  <label for="uploadTitle">Unit Title</label>
+                  <input id="uploadTitle" type="text" placeholder="e.g. Data Structures" required />
+                </div>
+                <div class="form-group">
+                  <label for="uploadCourse">Unit Code</label>
+                  <input id="uploadCourse" type="text" placeholder="e.g. CSC211" required />
+                </div>
+                <div class="form-group">
+                  <label for="uploadCourseName">Course Name</label>
+                  <input id="uploadCourseName" type="text" placeholder="e.g. Computer Science" required />
+                </div>
               </div>
-              <div>
-                <label for="uploadCourse">Unit Code</label>
-                <input id="uploadCourse" type="text" placeholder="e.g. CSC211" required />
-              </div>
-              <div>
-                <label for="uploadCourseName">Course Name</label>
-                <input id="uploadCourseName" type="text" placeholder="e.g. Computer Science" required />
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="form-group">
+                  <label for="uploadYear">Exam Year</label>
+                  <input id="uploadYear" type="number" placeholder="e.g. 2026" required />
+                </div>
+                <div class="form-group">
+                  <label for="uploadType">Exam Type</label>
+                  <select id="uploadType" required>
+                    <option value="" disabled selected>Select exam type</option>
+                    <option value="CAT 1">CAT 1</option>
+                    <option value="CAT 2">CAT 2</option>
+                    <option value="Main Exam">Main Exam</option>
+                    <option value="Supplementary">Supplementary</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="uploadFile">PDF Attachment</label>
+                  <input id="uploadFile" type="file" accept="application/pdf" required />
+                </div>
               </div>
             </div>
-            <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
-              <div>
-                <label for="uploadYear">Year</label>
-                <input id="uploadYear" type="number" placeholder="e.g. 2026" required />
-              </div>
-              <div>
-                <label for="uploadType">Exam Type</label>
-                <select id="uploadType" required style="width: 100%;">
-                  <option value="" disabled selected>Select exam type</option>
-                  <option value="CAT 1">CAT 1</option>
-                  <option value="CAT 2">CAT 2</option>
-                  <option value="Main Exam">Main Exam</option>
-                  <option value="Supplementary">Supplementary</option>
-                </select>
-              </div>
-              <div>
-                <label for="uploadFile">PDF File</label>
-                <input id="uploadFile" type="file" accept="application/pdf" required />
-              </div>
-            </div>
-          </div>
-          <button id="uploadBtn" type="button" class="btn btn-upload mt-16" style="width: 100%; justify-content: center;">Upload Paper</button>
+            <button id="uploadBtn" type="button" class="btn btn-upload" style="width: 100%;">Upload Paper</button>
+          </form>
         </div>
       </div>
     </section>

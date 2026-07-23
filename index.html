@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -47,32 +47,32 @@
 
   <main>
     <section class="hero" id="home">
-      <div>
-        <div class="pill">Built for mobile-first students</div>
-        <div class="card">
-          <h1>Master your exams with smart access.</h1>
-          <p>Sign up with your student ID, enjoy a 7-day free trial, then subscribe for just 30 Ksh per month. Papers open in a secure in-app viewer with watermark protection and no download button.</p>
-          <div class="cta-row">
-            <a class="btn btn-trial" href="auth.html">Start Free Trial</a>
-            <a class="btn btn-browse" href="library.html">Browse Library</a>
-          </div>
+      <div class="hero-content">
+        <div class="hero-pill">Built for mobile-first students</div>
+        <h1>Master your exams with smart access.</h1>
+        <p class="hero-desc">Sign up with your student ID, enjoy a 7-day free trial, then subscribe for just 30 Ksh per month. Papers open in a secure in-app viewer with watermark protection and no download button.</p>
+        <div class="cta-row">
+          <a class="btn btn-trial" href="auth.html">Start Free Trial</a>
+          <a class="btn btn-browse" href="library.html">Browse Library</a>
         </div>
         <div id="renewalNotice" class="notice"></div>
       </div>
       <div class="hero-card">
         <h3>Today on your dashboard</h3>
-        <p id="heroStatus">Create an account to unlock your free trial and subscription tools.</p>
-        <div class="split">
-          <div>
+        <div id="heroStatus" class="hero-status-box">Create an account to unlock your free trial and subscription tools.</div>
+        <div class="hero-metrics">
+          <div class="hero-metric-item">
             <div class="metric" id="metricAccess">0</div>
-            <div>Active access days</div>
+            <div class="metric-label">Active access days</div>
           </div>
-          <div>
+          <div class="hero-metric-item">
             <div class="metric" id="metricPapers">0</div>
-            <div>Past papers ready</div>
+            <div class="metric-label">Past papers ready</div>
           </div>
         </div>
-        <p>Reward boost: Upload a past paper to earn +2 free days. Invite 3 friends for +7 days.</p>
+        <div class="hero-promo-text">
+          ✨ <strong>Reward boost</strong>: Upload a past paper to earn <strong>+2 free days</strong>. Invite 3 friends for <strong>+7 days</strong>.
+        </div>
       </div>
     </section>
 
@@ -82,19 +82,23 @@
           <h2>What Students Get</h2>
         </div>
         <div class="grid">
-          <div class="card">
+          <div class="card feature-card">
+            <div class="feature-icon-wrapper">🛡️</div>
             <h3>Secure In-App Viewer</h3>
             <p>Open PDFs inside the app with watermark overlay and toolbar hidden. Use FLAG_SECURE in Android webview for screenshot blocking.</p>
           </div>
-          <div class="card">
+          <div class="card feature-card">
+            <div class="feature-icon-wrapper">🔍</div>
             <h3>Fast Search</h3>
             <p>Find papers by unit name, code, year, or exam type in seconds.</p>
           </div>
-          <div class="card">
+          <div class="card feature-card">
+            <div class="feature-icon-wrapper">💳</div>
             <h3>Transparent Pricing</h3>
             <p>30 Ksh monthly subscription with M-Pesa Daraja integration. Renewal reminders keep you active.</p>
           </div>
-          <div class="card">
+          <div class="card feature-card">
+            <div class="feature-icon-wrapper">🎁</div>
             <h3>Rewards That Matter</h3>
             <p>Upload past papers or invite friends and earn bonus access days automatically.</p>
           </div>
@@ -108,17 +112,20 @@
           <h2>Get Started</h2>
         </div>
         <div class="grid">
-          <div class="card">
+          <div class="card step-card">
+            <div class="step-number">01</div>
             <h3>Create Your Account</h3>
             <p>Register with your student ID and unlock a 7-day free trial instantly.</p>
             <a class="btn btn-trial" href="auth.html">Go to Login</a>
           </div>
-          <div class="card">
+          <div class="card step-card">
+            <div class="step-number">02</div>
             <h3>Activate Subscription</h3>
             <p>Pay 30 Ksh with M-Pesa to unlock 30 days of access.</p>
             <a class="btn btn-pay" href="subscription.html">Subscribe</a>
           </div>
-          <div class="card">
+          <div class="card step-card">
+            <div class="step-number">03</div>
             <h3>Browse the Library</h3>
             <p>Search by course or unit name, code, year, and exam type.</p>
             <a class="btn btn-browse" href="library.html">Open Library</a>

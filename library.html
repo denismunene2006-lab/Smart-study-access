@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿<!doctype html>
+﻿﻿﻿﻿﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -49,20 +49,22 @@
       <div class="section-title">
         <h2>Past Papers Library</h2>
       </div>
-      <div class="card">
+      <div class="card" style="margin-bottom: 2rem;">
         <div class="library-toolbar">
-          <input id="searchInput" type="search" placeholder="Search by unit name" />
-          <select id="courseFilter"></select>
-          <select id="yearFilter"></select>
-          <select id="typeFilter"></select>
-          <div class="toolbar-actions">
-            <button id="librarySearchBtn" class="library-search-btn" type="button">Search</button>
-            <button id="clearFiltersBtn" class="clear-filters-btn" type="button">Clear Filters</button>
+          <div class="library-search-wrapper">
+            <input id="searchInput" type="search" placeholder="Search by unit name..." />
+            <button id="librarySearchBtn" class="btn btn-trial library-search-btn" type="button">Search</button>
           </div>
+          <div class="library-filter-group">
+            <select id="courseFilter"></select>
+            <select id="yearFilter"></select>
+            <select id="typeFilter"></select>
+          </div>
+          <button id="clearFiltersBtn" class="btn btn-ghost clear-filters-btn" type="button">Clear Filters</button>
         </div>
         <div id="resultCount" class="pill">0 papers</div>
       </div>
-      <div id="papersGrid" class="grid" style="margin-top: var(--space-lg);"></div>
+      <div id="papersGrid" class="grid"></div>
     </section>
   </main>
 

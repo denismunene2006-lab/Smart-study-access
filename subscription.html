@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<!doctype html>
+﻿﻿﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -47,21 +47,31 @@
   <main>
     <section id="subscription">
       <div class="section-title">
-        <h2>Subscription and Payments</h2>
+        <h2>Subscription & Payments</h2>
       </div>
       <div class="split">
-        <div class="card">
-          <h3>Monthly Plan</h3>
-          <p class="pill">30 Ksh per month</p>
-          <p>After payment, access unlocks for 30 days. Renewal reminders appear 3 days before expiry.</p>
-          <label for="mpesaPhone">M-Pesa Phone Number</label>
-          <input id="mpesaPhone" type="tel" placeholder="07XXXXXXXX" />
-          <button id="payBtn" class="btn btn-pay" type="button">Pay with M-Pesa</button>
-          <p class="fs-xs mt-16">An STK push will be sent to your phone after you submit payment.</p>
+        <div class="card pricing-card">
+          <span class="pill">Standard Plan</span>
+          <h3>Monthly Unlimited</h3>
+          <div class="pricing-card-price">30 Ksh<span>/30 days</span></div>
+          <p>Gain full, uninterrupted access to the complete past papers library. Safe and secure view limits apply.</p>
+          
+          <div class="pricing-card-form">
+            <div class="form-group" style="width: 100%;">
+              <label for="mpesaPhone">M-Pesa Phone Number</label>
+              <input id="mpesaPhone" type="tel" placeholder="e.g. 0712345678" />
+            </div>
+            <button id="payBtn" class="btn btn-pay" type="button">Pay with M-Pesa</button>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); text-align: center;">
+            🔒 Safe payment: An STK push prompt will be sent directly to your Safaricom mobile phone.
+          </p>
         </div>
-        <div class="card">
+
+        <div class="card" style="display: flex; flex-direction: column; gap: 1rem; min-height: 400px;">
           <h3>Recent Transactions</h3>
-          <div id="transactionList">No transactions yet.</div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Track your recent M-Pesa payments and activation approvals.</p>
+          <div id="transactionList" style="flex: 1;">No transactions yet.</div>
         </div>
       </div>
     </section>

@@ -483,15 +483,26 @@ function renderTransactions() {
     return;
   }
 
-  elements.transactionList.innerHTML = state.transactions
-    .slice(0, 4)
-    .map((txn) => `
-      <div style="margin-bottom:8px;">
-        <div><strong>${txn.amount} Ksh</strong> - ${humanizeStatus(txn.status)}</div>
-        <div style="font-size:12px; color: rgba(14, 27, 22, 0.6);">${formatDate(txn.createdAt)} via ${txn.method}</div>
-      </div>
-    `)
-    .join("");
+  elements.transactionList.innerHTML = `
+    <div class="transaction-list">
+      ${state.transactions
+        .slice(0, 4)
+        .map((txn) => {
+          const isSuccess = String(txn.status).toLowerCase() === "completed" || String(txn.status).toLowerCase() === "success" || String(txn.status).toLowerCase() === "paid";
+          const statusClass = isSuccess ? "active" : "expired";
+          return `
+            <div class="transaction-item">
+              <div class="transaction-item-left">
+                <span class="transaction-amount">${txn.amount} Ksh</span>
+                <span class="transaction-date">${formatDate(txn.createdAt)} via ${txn.method}</span>
+              </div>
+              <span class="status ${statusClass}">${humanizeStatus(txn.status)}</span>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 function fillSelect(select, placeholder, options) {
@@ -582,11 +593,16 @@ function renderLibrary() {
       const subtitle = [paper.courseName || "", examLabel].filter(Boolean).join(" | ");
       return `
         <div class="card paper-card reveal" style="transition-delay: ${index * 0.05}s">
-          ${locked ? '<div class="lock">Locked</div>' : ""}
-          <h3>${paper.courseCode || ""} - ${paper.unitName || ""}</h3>
+          <div class="card-badge-row">
+            <span class="pill">${paper.courseCode || ""}</span>
+            ${locked ? '<span class="lock-badge">Locked</span>' : '<span class="unlocked-badge">Unlocked</span>'}
+          </div>
+          <h3>${paper.unitName || ""}</h3>
           <p>${subtitle}</p>
-          <div class="paper-meta">${paper.views || 0} views</div>
-          <button class="btn btn-open" type="button" onclick="openViewer('${paper.id}')">Open Paper</button>
+          <div class="paper-card-footer">
+            <span class="paper-card-views">👁️ ${paper.views || 0} views</span>
+            <button class="btn btn-open" type="button" onclick="openViewer('${paper.id}')">Open Paper</button>
+          </div>
         </div>
       `;
     })
@@ -713,14 +729,25 @@ function renderUploads() {
     return;
   }
 
-  elements.myUploads.innerHTML = state.uploads
-    .map((upload) => `
-      <div style="margin-bottom:8px;">
-        <strong>${upload.title}</strong>
-        <div style="font-size:12px; color: rgba(14, 27, 22, 0.6);">${humanizeStatus(upload.status)} - ${formatDate(upload.createdAt)}</div>
-      </div>
-    `)
-    .join("");
+  elements.myUploads.innerHTML = `
+    <div class="list-tracker">
+      ${state.uploads
+        .map((upload) => {
+          const statusLower = String(upload.status).toLowerCase();
+          const statusClass = statusLower === "approved" ? "active" : "expired";
+          return `
+            <div class="list-tracker-item">
+              <div>
+                <div class="list-tracker-title">${upload.title}</div>
+                <div class="list-tracker-subtitle">${upload.courseCode} • ${formatDate(upload.createdAt)}</div>
+              </div>
+              <span class="status ${statusClass}">${humanizeStatus(upload.status)}</span>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 function renderAdmin() {
@@ -742,8 +769,14 @@ function renderAdmin() {
 
   elements.adminActiveSubs.textContent = state.admin.activeSubscriptions || 0;
   elements.adminReferrals.textContent = state.admin.totalReferrals || 0;
+  
   elements.adminMostViewed.innerHTML = (state.admin.mostViewed || [])
-    .map((paper) => `<div style="margin-bottom:6px;">${paper.courseCode} - ${paper.views} views</div>`)
+    .map((paper) => `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; background:var(--bg-body); padding:0.5rem 0.75rem; border-radius:var(--radius-sm); border:1px solid var(--stroke);">
+        <span style="font-weight:700;">${paper.courseCode}</span>
+        <span class="pill" style="font-size:0.75rem;">👁️ ${paper.views} views</span>
+      </div>
+    `)
     .join("") || "No data yet.";
 
   if (!state.admin.pendingUploads || state.admin.pendingUploads.length === 0) {
@@ -751,18 +784,27 @@ function renderAdmin() {
     return;
   }
 
-  elements.adminUploads.innerHTML = state.admin.pendingUploads
-    .map((upload) => `
-      <div style="margin-bottom:12px;">
-        <strong>${upload.title}</strong> (${upload.courseCode})
-        <div style="font-size:12px; color: rgba(14, 27, 22, 0.6);">Submitted ${formatDate(upload.createdAt)}</div>
-        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-approve" type="button" onclick="approveUpload('${upload.id}')">Approve</button>
-          <button class="btn btn-reject" type="button" onclick="rejectUpload('${upload.id}')">Reject</button>
-        </div>
-      </div>
-    `)
-    .join("");
+  elements.adminUploads.innerHTML = `
+    <div class="list-tracker">
+      ${state.admin.pendingUploads
+        .map((upload) => `
+          <div class="list-tracker-item" style="flex-direction: column; align-items: stretch; gap: 1rem; padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+              <div>
+                <div class="list-tracker-title" style="font-size: 1.05rem;">${upload.title}</div>
+                <div class="list-tracker-subtitle">${upload.courseCode} • Submitted ${formatDate(upload.createdAt)}</div>
+              </div>
+              <span class="status expired">Pending</span>
+            </div>
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+              <button class="btn btn-reject" type="button" onclick="rejectUpload('${upload.id}')">Reject</button>
+              <button class="btn btn-approve" type="button" onclick="approveUpload('${upload.id}')">Approve</button>
+            </div>
+          </div>
+        `)
+        .join("")}
+    </div>
+  `;
 }
 
 async function approveUpload(uploadId) {

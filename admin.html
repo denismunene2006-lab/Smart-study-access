@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<!doctype html>
+﻿﻿﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -49,27 +49,28 @@
       <div class="section-title">
         <h2>Admin Dashboard</h2>
       </div>
-      <div class="grid">
-        <div class="card">
+      <div class="grid" style="margin-bottom: 2.5rem;">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;">
           <h3>Subscriptions</h3>
-          <div class="metric" id="adminActiveSubs">0</div>
-          <div>Active subscriptions</div>
+          <div class="metric" id="adminActiveSubs" style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">0</div>
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Active Subscriptions</div>
         </div>
-        <div class="card">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;">
           <h3>Referrals</h3>
-          <div class="metric" id="adminReferrals">0</div>
-          <div>Total referrals</div>
+          <div class="metric" id="adminReferrals" style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">0</div>
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Total Referrals</div>
         </div>
-        <div class="card">
+        <div class="card" style="display: flex; flex-direction: column; gap: 0.75rem;">
           <h3>Most Viewed</h3>
           <div id="adminMostViewed">No data yet.</div>
         </div>
       </div>
-      <div class="card" style="margin-top: var(--space-xl);">
+      
+      <div class="card">
         <div class="section-title">
           <h2>Upload Approvals</h2>
         </div>
-        <div class="card">
+        <div class="card" style="background: var(--bg-body);">
           <div id="adminUploads">No uploads waiting approval.</div>
         </div>
       </div>
@@ -81,17 +82,29 @@
       </div>
       <div class="card">
         <details>
-          <summary style="font-weight:700; cursor:pointer;">Open deployment checklist</summary>
-          <div class="pill">Frontend</div>
-          <p>Deploy the static site on Vercel and set the <strong>FRONTEND_API_BASE</strong> environment variable to your Render API URL.</p>
-          <div class="pill">Backend</div>
-          <p>Deploy the Express API on Render from the <strong>server</strong> directory and use <strong>/api/health/live</strong> as the health check path.</p>
-          <div class="pill">Database</div>
-          <p>Connect the backend to MongoDB using <strong>MONGODB_URI</strong> and keep <strong>JWT_SECRET</strong> out of source control.</p>
-          <div class="pill">Storage</div>
-          <p>Attach a persistent disk on Render so uploads and approved papers survive redeploys.</p>
-          <div class="pill">Payments</div>
-          <p>Set the M-Pesa callback URL to <strong>/api/subscriptions/mpesa/callback</strong> on your Render API domain.</p>
+          <summary style="font-weight:700; cursor:pointer; font-size: 0.95rem;">Open deployment checklist</summary>
+          <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem;">
+            <div>
+              <div class="pill">Frontend</div>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Deploy the static site on Vercel and set the <strong>FRONTEND_API_BASE</strong> environment variable to your hosted Node API URL.</p>
+            </div>
+            <div>
+              <div class="pill">Backend</div>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Deploy the Express API on Render / Railway from the <strong>server</strong> directory and use <strong>/api/health/live</strong> as the health check path.</p>
+            </div>
+            <div>
+              <div class="pill">Database</div>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Execute <strong>server/supabase-schema.sql</strong> in the Supabase SQL editor. Set <strong>SUPABASE_URL</strong>, <strong>SUPABASE_ANON_KEY</strong>, and <strong>SUPABASE_SERVICE_ROLE_KEY</strong> environment variables on your API host.</p>
+            </div>
+            <div>
+              <div class="pill">Storage</div>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Create two Storage buckets in the Supabase dashboard named <strong>papers</strong> and <strong>uploads</strong> with appropriate access policies.</p>
+            </div>
+            <div>
+              <div class="pill">Payments</div>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Configure your M-Pesa sandbox credentials. Set the callback URL to point to <strong>/api/subscriptions/mpesa/callback</strong> on your API host domain.</p>
+            </div>
+          </div>
         </details>
       </div>
     </section>
